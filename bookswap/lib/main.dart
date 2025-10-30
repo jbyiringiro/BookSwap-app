@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/main_navigation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'providers/auth_provider.dart';
-import 'providers/book_provider.dart';
-import 'providers/chat_provider.dart';
+import 'providers/book_listing_provider.dart';
+import 'providers/swap_offer_provider.dart';
+import 'screens/auth_screen.dart';
+import 'screens/main_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,46 +14,32 @@ void main() async {
 }
 
 class BookSwapApp extends StatelessWidget {
-  const BookSwapApp({Key? key}) : super(key: key);
+  const BookSwapApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => BookProvider()),
-        ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => BookListingProvider()),
+        ChangeNotifierProvider(create: (_) => SwapOfferProvider()),
       ],
       child: MaterialApp(
         title: 'BookSwap',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primaryColor: const Color(0xFF1E2749),
-          scaffoldBackgroundColor: Colors.white,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1E2749),
-            primary: const Color(0xFF1E2749),
-            secondary: const Color(0xFFE9B44C),
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF1E2749),
-            foregroundColor: Colors.white,
-            elevation: 0,
-          ),
-          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-            backgroundColor: Color(0xFF1E2749),
-            selectedItemColor: Color(0xFFE9B44C),
-            unselectedItemColor: Colors.white54,
-          ),
-        ),
+        theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
         home: Consumer<AuthProvider>(
-          builder: (context, auth, _) {
-            if (auth.user != null) {
-              return const MainNavigation();
+          builder: (context, authProvider, child) {
+            if (authProvider.isLoading) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
             }
-            return const LoginScreen();
+            return authProvider.isAuthenticated
+                ? const MainApp()
+                : const AuthScreen();
           },
         ),
+        debugShowCheckedModeBanner: false,
       ),
     );
   }

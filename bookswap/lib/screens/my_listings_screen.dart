@@ -1,226 +1,203 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import '../providers/book_provider.dart';
+import '../providers/book_listing_provider.dart';
 import '../providers/auth_provider.dart';
-import 'post_book_screen.dart';
+import '../models/book_listing.dart';
+import '../widgets/book_listing_widget.dart';
 
 class MyListingsScreen extends StatelessWidget {
-  const MyListingsScreen({Key? key}) : super(key: key);
+  const MyListingsScreen({super.key});
+
+  void _showPostBookDialog(BuildContext context) {
+    final bookProvider = Provider.of<BookListingProvider>(
+      context,
+      listen: false,
+    );
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    String title = '';
+    String author = '';
+    String swapFor = '';
+    String condition = 'Like New';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Post a Book'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(labelText: 'Book Title'),
+                onChanged: (value) => title = value,
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Author'),
+                onChanged: (value) => author = value,
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Swap For'),
+                onChanged: (value) => swapFor = value,
+              ),
+              const SizedBox(height: 16),
+              const Text('Condition:'),
+              Wrap(
+                spacing: 8,
+                children: ['New', 'Like New', 'Good', 'Used'].map((cond) {
+                  return FilterChip(
+                    label: Text(cond),
+                    selected: condition == cond,
+                    onSelected: (selected) {
+                      condition = cond;
+                      Navigator.of(context).pop();
+                      _showPostBookDialog(context);
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (title.isNotEmpty && author.isNotEmpty && swapFor.isNotEmpty) {
+                final newListing = BookListing(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  userId: authProvider.user!.id,
+                  title: title,
+                  author: author,
+                  condition: condition,
+                  swapFor: swapFor,
+                  createdAt: DateTime.now(),
+                );
+                bookProvider.addListing(newListing);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('POST'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bookProvider = Provider.of<BookProvider>(context);
+    final bookProvider = Provider.of<BookListingProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
-    final myBooks = bookProvider.myBooks;
-    final myOffers = bookProvider.myOffers;
+    final userListings = bookProvider.getUserListings(authProvider.user!.id);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Listings'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PostBookScreen()),
-              );
-            },
-          ),
-        ],
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (myOffers.isNotEmpty) ...[
-              const Text(
-                'My Swap Offers',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      body: userListings.isEmpty
+          ? const Center(
+              child: Text(
+                'No listings yet.\nTap + to add your first book!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, color: Colors.grey),
               ),
-              const SizedBox(height: 12),
-              ...myOffers.map(
-                (offer) => Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFF1E2749),
-                      child: Icon(Icons.swap_horiz, color: Colors.white),
-                    ),
-                    title: Text(offer.bookTitle),
-                    subtitle: Text('To: ${offer.receiverName}'),
-                    trailing: Chip(
-                      label: Text(
-                        offer.status.toUpperCase(),
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                      backgroundColor: offer.status == 'pending'
-                          ? Colors.orange.shade100
-                          : Colors.green.shade100,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-            const Text(
-              'My Books',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            if (myBooks.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: Text(
-                    'No books posted yet',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ),
-              )
-            else
-              ...myBooks.map(
-                (book) => Card(
-                  margin: const EdgeInsets.only(bottom: 12),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: userListings.length,
+              itemBuilder: (context, index) {
+                final listing = userListings[index];
+                return Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 80,
-                          height: 110,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8B4513),
-                            borderRadius: BorderRadius.circular(4),
+                        Text(
+                          listing.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
                           ),
-                          child: book.imageUrl != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: Image.network(
-                                    book.imageUrl!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.book,
-                                  color: Colors.white,
-                                  size: 40,
-                                ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                book.title,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                        const SizedBox(height: 8),
+                        Text(
+                          'By ${listing.author}',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Chip(
+                              label: Text(listing.condition),
+                              backgroundColor: _getConditionColor(
+                                listing.condition,
+                              ),
+                              labelStyle: const TextStyle(color: Colors.white),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Swap for: ${listing.swapFor}',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontStyle: FontStyle.italic,
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                book.author,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                // Edit functionality
+                              },
+                              child: const Text('EDIT'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                bookProvider.deleteListing(listing.id);
+                              },
+                              child: const Text(
+                                'DELETE',
+                                style: TextStyle(color: Colors.red),
                               ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: book.condition == 'New'
-                                          ? Colors.green.shade100
-                                          : book.condition == 'Like New'
-                                          ? Colors.blue.shade100
-                                          : book.condition == 'Good'
-                                          ? Colors.orange.shade100
-                                          : Colors.grey.shade200,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      book.condition,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: book.condition == 'New'
-                                            ? Colors.green.shade800
-                                            : book.condition == 'Like New'
-                                            ? Colors.blue.shade800
-                                            : book.condition == 'Good'
-                                            ? Colors.orange.shade800
-                                            : Colors.grey.shade800,
-                                      ),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      size: 20,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () async {
-                                      final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: const Text('Delete Book'),
-                                          content: const Text(
-                                            'Are you sure you want to delete this book?',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, false),
-                                              child: const Text('Cancel'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, true),
-                                              child: const Text('Delete'),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                      if (confirm == true) {
-                                        await bookProvider.deleteBook(book.id);
-                                      }
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                ),
-              ),
-          ],
-        ),
-      ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const PostBookScreen()),
-          );
-        },
-        backgroundColor: const Color(0xFFE9B44C),
-        child: const Icon(Icons.add, color: Color(0xFF1E2749)),
+        onPressed: () => _showPostBookDialog(context),
+        child: const Icon(Icons.add),
       ),
     );
+  }
+
+  Color _getConditionColor(String condition) {
+    switch (condition.toLowerCase()) {
+      case 'new':
+        return Colors.green;
+      case 'like new':
+        return Colors.blue;
+      case 'good':
+        return Colors.orange;
+      case 'used':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 }
