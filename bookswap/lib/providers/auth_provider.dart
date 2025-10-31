@@ -1,192 +1,164 @@
-import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// lib/providers/auth_provider.dart
+
+import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:email_validator/email_validator.dart';
-import '../models/user.dart';
+// Import the AuthResult class
+import '../models/auth_result.dart';
 
+/// Provider class to manage the authentication state of the user.
+/// This class handles user sign-in, sign-up, sign-out, email verification checks,
+/// and listens to authentication state changes to update the UI accordingly.
 class AuthProvider with ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  // Instance of the authentication service to perform Firebase operations
+  final AuthService _authService = AuthService();
 
-  User? _user;
+  // Stores the current user's data once they are logged in
+  BookSwapUser? _currentUser;
+
+  // Tracks if any authentication operation is currently in progress
   bool _isLoading = false;
-  String? _error;
 
-  User? get user => _user;
+  /// Getter for the current user
+  BookSwapUser? get currentUser => _currentUser;
+
+  /// Getter for the loading state
   bool get isLoading => _isLoading;
-  String? get error => _error;
-  bool get isAuthenticated => _user != null;
 
+  /// Checks if the user is currently authenticated
+  bool get isAuthenticated => _currentUser != null;
+
+  /// Constructor: Initializes the provider and starts listening to auth state changes
   AuthProvider() {
-    // Check if user is already signed in
-    _checkCurrentUser();
+    // Listen to changes in the user's authentication state (signed in/signed out)
+    _authService.authStateChanges.listen(_onAuthStateChanged);
   }
 
-  Future<void> _checkCurrentUser() async {
-    _isLoading = true;
-    notifyListeners();
-
-    final currentUser = _auth.currentUser;
-    if (currentUser != null) {
-      await _loadUserData(currentUser.uid);
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> _loadUserData(String userId) async {
-    try {
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-      if (userDoc.exists) {
-        _user = User.fromFirestore(userDoc.data()!, userDoc.id);
+  /// Callback triggered when the user's authentication state changes
+  /// If the user is signed in, fetch their data from Firestore
+  /// If the user is signed out, clear the current user data
+  void _onAuthStateChanged(user) async {
+    if (user != null) {
+      // User is signed in, check if email is verified and fetch user data from Firestore
+      if (user.emailVerified) {
+        await _fetchUserData(user.uid);
+      } else {
+        // Email not verified, clear user data and notify listeners
+        _currentUser = null;
+        notifyListeners();
       }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error loading user data: $e');
-      }
+    } else {
+      // User is signed out, clear user data and notify listeners
+      _currentUser = null;
+      notifyListeners();
     }
   }
 
-  Future<void> signIn(String email, String password) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
+  /// Fetches the user's data from Firestore based on their UID
+  /// and updates the provider's current user state
+  Future<void> _fetchUserData(String uid) async {
     try {
-      if (!EmailValidator.validate(email)) {
-        throw FirebaseAuthException(
-          code: 'invalid-email',
-          message: 'Invalid email format',
-        );
-      }
-
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-
-      await _loadUserData(userCredential.user!.uid);
-      _error = null;
-    } on FirebaseAuthException catch (e) {
-      _error = _getAuthErrorMessage(e);
-      _user = null;
-    } catch (e) {
-      _error = 'Failed to sign in: $e';
-      _user = null;
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> signUp(String email, String password, String name) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      if (!EmailValidator.validate(email)) {
-        throw FirebaseAuthException(
-          code: 'invalid-email',
-          message: 'Invalid email format',
-        );
-      }
-
-      if (name.isEmpty) {
-        throw FirebaseAuthException(
-          code: 'invalid-name',
-          message: 'Name cannot be empty',
-        );
-      }
-
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-
-      // Create user document in Firestore
-      final newUser = User(
-        id: userCredential.user!.uid,
-        email: email.trim(),
-        name: name.trim(),
-        createdAt: DateTime.now(),
-        emailVerified: false,
-      );
-
-      await _firestore
+      // Get the user document from Firestore
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(newUser.id)
-          .set(newUser.toFirestore());
+          .doc(uid)
+          .get();
 
-      // Send email verification
-      await userCredential.user!.sendEmailVerification();
-
-      _user = newUser;
-      _error = null;
-    } on FirebaseAuthException catch (e) {
-      _error = _getAuthErrorMessage(e);
-      _user = null;
+      // Check if the document exists
+      if (userDoc.exists) {
+        // Cast the document data to a Map
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+        // Create a BookSwapUser object from the Firestore data
+        _currentUser = BookSwapUser.fromFirebaseUser(userData, uid);
+        // Notify listeners that the user data has changed
+        notifyListeners();
+      }
     } catch (e) {
-      _error = 'Failed to sign up: $e';
-      _user = null;
+      // Print error to console for debugging
+      print('Error fetching user  $e');
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
+  /// Signs up a new user with email, password, and display name
+  /// Returns an AuthResult object with success status and message
+  Future<AuthResult> signUp({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    // Set loading state to true and notify listeners to show loading UI
+    _setLoading(true);
+
+    // Call the sign-up method in the auth service (this now returns AuthResult)
+    AuthResult result = await _authService.signUp(
+      email: email,
+      password: password,
+      displayName: displayName,
+    );
+
+    // Set loading state back to false
+    _setLoading(false);
+    return result; // Return the AuthResult object
+  }
+
+  /// Signs in an existing user with email and password
+  /// Returns an AuthResult object with success status and message
+  /// Returns true if successful and email is verified, false otherwise
+  Future<AuthResult> signIn({
+    required String email,
+    required String password,
+  }) async {
+    // Set loading state to true and notify listeners to show loading UI
+    _setLoading(true);
+
+    // Call the sign-in method in the auth service (this now returns AuthResult)
+    AuthResult result = await _authService.signIn(
+      email: email,
+      password: password,
+    );
+
+    // If sign-in was successful, fetch user data
+    if (result.success) {
+      await _fetchUserData(_authService.getCurrentUser()!.uid);
+    }
+
+    // Set loading state back to false
+    _setLoading(false);
+    return result; // Return the AuthResult object
+  }
+
+  /// Signs out the current user, clearing all user data and state
   Future<void> signOut() async {
-    try {
-      await _auth.signOut();
-      _user = null;
-      _error = null;
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to sign out: $e';
-      notifyListeners();
-    }
-  }
+    // Call the sign-out method in the auth service
+    await _authService.signOut();
 
-  Future<void> resetPassword(String email) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    // Clear the current user data
+    _currentUser = null;
 
-    try {
-      await _auth.sendPasswordResetEmail(email: email.trim());
-      _error = null;
-    } on FirebaseAuthException catch (e) {
-      _error = _getAuthErrorMessage(e);
-    } catch (e) {
-      _error = 'Failed to reset password: $e';
-    }
-
-    _isLoading = false;
+    // Notify listeners that the authentication state has changed
     notifyListeners();
   }
 
-  String _getAuthErrorMessage(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found':
-        return 'No user found with this email';
-      case 'wrong-password':
-        return 'Incorrect password';
-      case 'invalid-email':
-        return 'Invalid email address';
-      case 'email-already-in-use':
-        return 'Email is already in use';
-      case 'weak-password':
-        return 'Password is too weak';
-      case 'network-request-failed':
-        return 'Network error. Please check your connection';
-      default:
-        return 'Authentication failed: ${e.message}';
-    }
+  /// Sends an email verification link to the current user's email address
+  Future<void> sendEmailVerification() async {
+    await _authService.sendEmailVerification();
   }
 
-  void clearError() {
-    _error = null;
+  /// Checks if the current user's email address has been verified
+  bool isEmailVerified() {
+    return _authService.isEmailVerified();
+  }
+
+  /// Updates the email verification status in Firestore
+  /// This should be called periodically or when the app starts
+  Future<void> updateEmailVerificationStatus() async {
+    await _authService.updateEmailVerificationStatus();
+  }
+
+  /// Private method to update the loading state and notify listeners
+  void _setLoading(bool loading) {
+    _isLoading = loading;
     notifyListeners();
   }
 }

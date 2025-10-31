@@ -1,203 +1,210 @@
+// lib/screens/my_listings_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/book_listing_provider.dart';
+import '../models/book_model.dart';
+import '../services/book_service.dart';
 import '../providers/auth_provider.dart';
-import '../models/book_listing.dart';
-import '../widgets/book_listing_widget.dart';
+import '../widgets/book_card.dart';
+import '../widgets/bottom_nav_bar.dart';
 
 class MyListingsScreen extends StatelessWidget {
   const MyListingsScreen({super.key});
 
-  void _showPostBookDialog(BuildContext context) {
-    final bookProvider = Provider.of<BookListingProvider>(
-      context,
-      listen: false,
-    );
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    String title = '';
-    String author = '';
-    String swapFor = '';
-    String condition = 'Like New';
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Post a Book'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: 'Book Title'),
-                onChanged: (value) => title = value,
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Author'),
-                onChanged: (value) => author = value,
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Swap For'),
-                onChanged: (value) => swapFor = value,
-              ),
-              const SizedBox(height: 16),
-              const Text('Condition:'),
-              Wrap(
-                spacing: 8,
-                children: ['New', 'Like New', 'Good', 'Used'].map((cond) {
-                  return FilterChip(
-                    label: Text(cond),
-                    selected: condition == cond,
-                    onSelected: (selected) {
-                      condition = cond;
-                      Navigator.of(context).pop();
-                      _showPostBookDialog(context);
-                    },
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (title.isNotEmpty && author.isNotEmpty && swapFor.isNotEmpty) {
-                final newListing = BookListing(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  userId: authProvider.user!.id,
-                  title: title,
-                  author: author,
-                  condition: condition,
-                  swapFor: swapFor,
-                  createdAt: DateTime.now(),
-                );
-                bookProvider.addListing(newListing);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('POST'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final bookProvider = Provider.of<BookListingProvider>(context);
-    final authProvider = Provider.of<AuthProvider>(context);
-    final userListings = bookProvider.getUserListings(authProvider.user!.id);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Listings'),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: userListings.isEmpty
-          ? const Center(
+      body: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          if (authProvider.currentUser == null) {
+            return const Center(
               child: Text(
-                'No listings yet.\nTap + to add your first book!',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, color: Colors.grey),
+                'Please sign in to view your listings',
+                style: TextStyle(color: Colors.white),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: userListings.length,
-              itemBuilder: (context, index) {
-                final listing = userListings[index];
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          listing.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'By ${listing.author}',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Chip(
-                              label: Text(listing.condition),
-                              backgroundColor: _getConditionColor(
-                                listing.condition,
-                              ),
-                              labelStyle: const TextStyle(color: Colors.white),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Swap for: ${listing.swapFor}',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: () {
-                                // Edit functionality
-                              },
-                              child: const Text('EDIT'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                bookProvider.deleteListing(listing.id);
-                              },
-                              child: const Text(
-                                'DELETE',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+            );
+          }
+
+          return StreamBuilder<List<BookListing>>(
+            stream: BookService().getUserBooks(authProvider.currentUser!.uid),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              List<BookListing> books = snapshot.data ?? [];
+
+              if (books.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'No listings yet\n\nAdd your first book!',
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                    textAlign: TextAlign.center,
                   ),
                 );
-              },
-            ),
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  // Refresh will happen automatically with StreamBuilder
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: books.length,
+                  itemBuilder: (context, index) {
+                    final book = books[index];
+                    return Card(
+                      color: const Color(0xFF1E1E3C),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/book_detail', arguments: book);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              // Book Image
+                              Container(
+                                width: 80,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  color: Colors.grey[800],
+                                ),
+                                child: book.imageUrl != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          book.imageUrl!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return const Icon(
+                                              Icons.book,
+                                              size: 30,
+                                              color: Colors.grey,
+                                            );
+                                          },
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.book,
+                                        size: 30,
+                                        color: Colors.grey,
+                                      ),
+                              ),
+                              const SizedBox(width: 16),
+                              // Book Info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      book.title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      book.author,
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 14,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: book.swapStatus == 'Available'
+                                                ? Colors.green.withOpacity(0.2)
+                                                : book.swapStatus == 'Pending'
+                                                    ? Colors.orange.withOpacity(0.2)
+                                                    : Colors.red.withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            book.swapStatus,
+                                            style: TextStyle(
+                                              color: book.swapStatus == 'Available'
+                                                  ? Colors.green
+                                                  : book.swapStatus == 'Pending'
+                                                      ? Colors.orange
+                                                      : Colors.red,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '• ${book.condition}',
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (book.swapStatus == 'Pending' && book.requestedByName != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(
+                                          'Requested by: ${book.requestedByName}',
+                                          style: const TextStyle(
+                                            color: Colors.orange,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showPostBookDialog(context),
+        onPressed: () {
+          Navigator.pushNamed(context, '/post_book');
+        },
+        backgroundColor: Colors.blue, // Changed from yellow (Color(0xFFE6B84D)) to blue
         child: const Icon(Icons.add),
       ),
+      bottomNavigationBar: BottomNavBar(selectedIndex: 1),
     );
-  }
-
-  Color _getConditionColor(String condition) {
-    switch (condition.toLowerCase()) {
-      case 'new':
-        return Colors.green;
-      case 'like new':
-        return Colors.blue;
-      case 'good':
-        return Colors.orange;
-      case 'used':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
   }
 }
