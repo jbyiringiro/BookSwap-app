@@ -145,7 +145,7 @@ Before you begin, ensure you have the following installed:
 2.  Install the generated APK (`build/app/outputs/flutter-apk/app-release.apk`) onto your device or emulator manually, or upload the App Bundle (`build/app/outputs/bundle/release/app.aab`) to the Play Console.
 
 ## Folder Structure
-
+```
 bookswap/
 ├── android/ # Android native project files
 │ ├── app/
@@ -195,7 +195,7 @@ bookswap/
 ├── pubspec.lock # Lock file for dependencies (ignored by git)
 ├── pubspec.yaml # Project configuration and dependencies
 └── README.md # This file
-
+```
 
 ## Dependencies
 
