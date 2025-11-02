@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+// Add imports for kIsWeb and Uint8List
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart'; // Contains kIsWeb
 import '../services/book_service.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/bottom_nav_bar.dart';
@@ -65,7 +68,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
         author: _authorController.text.trim(),
         condition: _selectedCondition,
         ownerId: authProvider.currentUser!.uid,
-        ownerName: authProvider.currentUser!.displayName,
+        ownerName: authProvider.currentUser!.displayName ?? 'User',
         swapFor: _swapForController.text.trim(),
         imageFile: _selectedImage,
       );
@@ -165,13 +168,40 @@ class _PostBookScreenState extends State<PostBookScreen> {
                     ),
                   ),
                   child: _selectedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.file(
-                            _selectedImage!,
-                            fit: BoxFit.cover,
-                          ),
-                        )
+                      ? kIsWeb // Use kIsWeb to check platform
+                          ? FutureBuilder<Uint8List>( // Use Uint8List
+                              future: _selectedImage!.readAsBytes(), // Read bytes for Web
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const CircularProgressIndicator();
+                                }
+                                if (snapshot.hasError) {
+                                  return const Icon(Icons.error, color: Colors.red);
+                                }
+                                return Image.memory(
+                                  snapshot.data!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(
+                                      Icons.book,
+                                      size: 30,
+                                      color: Colors.grey,
+                                    );
+                                  },
+                                );
+                              },
+                            )
+                          : Image.file( // Use Image.file for mobile
+                              _selectedImage!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(
+                                  Icons.book,
+                                  size: 30,
+                                  color: Colors.grey,
+                                );
+                              },
+                            )
                       : const Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

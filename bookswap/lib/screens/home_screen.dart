@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/book_model.dart';
 import '../services/book_service.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/book_card.dart'; // Ensure this import is correct
+import '../widgets/book_card.dart';
 import '../widgets/bottom_nav_bar.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -16,11 +16,10 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Browse Listings'),
-        // Removed the back button as this is likely the main home screen
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back),
-        //   onPressed: () {},
-        // ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {},
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -36,7 +35,7 @@ class HomeScreen extends StatelessWidget {
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           return StreamBuilder<List<BookListing>>(
-            stream: BookService().getAvailableBooks(),
+            stream: BookService().getAvailableBooks(), // CRITICAL: Only fetches 'Available' books
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -66,21 +65,20 @@ class HomeScreen extends StatelessWidget {
                   itemCount: books.length,
                   itemBuilder: (context, index) {
                     final book = books[index];
-                    // Use the BookCard widget with the correct parameters
-                    // The BookCard widget expects: title, author, condition, swapStatus, imageUrl, requestedByName, and onTap
+                    // Use the BookCard widget which will display the correct status
                     return BookCard(
                       title: book.title,
                       author: book.author,
                       condition: book.condition,
-                      swapStatus: book.swapStatus, // Pass the swap status
-                      imageUrl: book.imageUrl, // Pass the image URL directly (it can be null)
-                      requestedByName: book.requestedByName, // Pass the name of the requester if pending
+                      swapStatus: book.swapStatus, // This will be 'Available' for all in this stream
+                      imageUrl: book.imageUrl,
+                      requestedByName: book.requestedByName,
                       onTap: () {
-                        // Navigate to book detail screen when the card is tapped
+                        // Navigate to book detail screen
                         Navigator.pushNamed(
                           context,
-                          '/book_detail', // Make sure this route is defined in main.dart
-                          arguments: book, // Pass the book object as arguments
+                          '/book_detail',
+                          arguments: book,
                         );
                       },
                     );
@@ -93,11 +91,10 @@ class HomeScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Navigate to the post book screen when the FAB is pressed
-          Navigator.pushNamed(context, '/post_book'); // Make sure this route is defined in main.dart
+          Navigator.pushNamed(context, '/post_book');
         },
-        backgroundColor: Colors.blue, // Changed from yellow to blue
-        foregroundColor: Colors.white, // Ensure the icon is white for contrast
+        backgroundColor: const Color(0xFF4285F4), // Changed from yellow to blue
+        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
       bottomNavigationBar: BottomNavBar(selectedIndex: 0),
@@ -110,8 +107,8 @@ class BookSearchDelegate extends SearchDelegate<String> {
   ThemeData appBarTheme(BuildContext context) {
     return Theme.of(context).copyWith(
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF12122F), // Use the app's background color
-        foregroundColor: Colors.white, // Use the app's text color
+        backgroundColor: Color(0xFF12122F),
+        foregroundColor: Colors.white,
       ),
     );
   }
@@ -146,7 +143,7 @@ class BookSearchDelegate extends SearchDelegate<String> {
   @override
   Widget buildSuggestions(BuildContext context) {
     return StreamBuilder<List<BookListing>>(
-      stream: BookService().getAvailableBooks(),
+      stream: BookService().getAvailableBooks(), // Use the same stream for searching
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -171,25 +168,19 @@ class BookSearchDelegate extends SearchDelegate<String> {
           itemBuilder: (context, index) {
             final book = books[index];
             return ListTile(
-              // Display book image if available
               leading: book.imageUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        book.imageUrl!,
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          // Show a default book icon if image fails to load
-                          return Container(
-                            width: 50,
-                            height: 50,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.book),
-                          );
-                        },
-                      ),
+                  ? Image.network(
+                      book.imageUrl!,
+                      width: 50,
+                      height: 50,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 50,
+                          height: 50,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.book),
+                        );
+                      },
                     )
                   : Container(
                       width: 50,
@@ -200,13 +191,8 @@ class BookSearchDelegate extends SearchDelegate<String> {
               title: Text(book.title),
               subtitle: Text(book.author),
               onTap: () {
-                // Close the search delegate and navigate to book detail
                 close(context, book.id);
-                Navigator.pushNamed(
-                  context,
-                  '/book_detail', // Make sure this route is defined in main.dart
-                  arguments: book, // Pass the book object as arguments
-                );
+                Navigator.pushNamed(context, '/book_detail', arguments: book);
               },
             );
           },

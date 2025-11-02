@@ -38,7 +38,7 @@ class BookListing {
       author: data['author'] ?? '',
       condition: data['condition'] ?? 'Used',
       ownerId: data['ownerId'] ?? '',
-      ownerName: data['ownerName'] ?? '',
+      ownerName: data['ownerName'] ?? 'Unknown User',
       imageUrl: data['imageUrl'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       swapFor: data['swapFor'],

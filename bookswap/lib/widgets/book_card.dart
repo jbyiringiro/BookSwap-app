@@ -10,7 +10,7 @@ class BookCard extends StatelessWidget {
   final String title;
   final String author;
   final String condition;
-  final String swapStatus;
+  final String swapStatus; // 'Available', 'Pending', 'Completed'
   final String? imageUrl; // Make imageUrl nullable
   final String? requestedByName; // Name of user who requested the swap (if pending)
   final VoidCallback? onTap;
@@ -20,9 +20,9 @@ class BookCard extends StatelessWidget {
     required this.title,
     required this.author,
     required this.condition,
-    required this.swapStatus,
+    required this.swapStatus, // Accept the swapStatus
     this.imageUrl, // Accept nullable imageUrl
-    this.requestedByName,
+    this.requestedByName, // Accept the requester name
     this.onTap,
   });
 
@@ -116,7 +116,7 @@ class BookCard extends StatelessWidget {
                                 ? Colors.green.withOpacity(0.2)
                                 : swapStatus == 'Pending'
                                     ? Colors.orange.withOpacity(0.2)
-                                    : Colors.red.withOpacity(0.2),
+                                    : Colors.red.withOpacity(0.2), // Could be grey for 'Completed'
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -126,7 +126,7 @@ class BookCard extends StatelessWidget {
                                   ? Colors.green
                                   : swapStatus == 'Pending'
                                       ? Colors.orange
-                                      : Colors.red,
+                                      : Colors.red, // Could be grey for 'Completed'
                               fontSize: 12,
                             ),
                           ),
@@ -141,6 +141,7 @@ class BookCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    // Show requester name only if status is 'Pending' and name exists
                     if (swapStatus == 'Pending' && requestedByName != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),

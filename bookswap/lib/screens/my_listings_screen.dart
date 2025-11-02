@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/book_service.dart';
 import '../models/book_model.dart';
+import '../widgets/book_card.dart'; // Assuming you have this widget
 import '../widgets/bottom_nav_bar.dart';
 
 /// Screen displaying the user's book listings and their swap requests ("My Offers").
@@ -74,7 +75,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
               _buildMyListingsTab(currentUser.uid),
 
               // --- TAB 2: My Offers (Books the User Requested) ---
-              _buildMyOffersTab(currentUser.uid),
+              _buildMyOffersTab(currentUser.uid), // Combined Pending & Completed
             ],
           );
         },
@@ -83,7 +84,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         onPressed: () {
           Navigator.pushNamed(context, '/post_book');
         },
-        backgroundColor: const Color(0xFF4285F4), // Sky blue color
+        backgroundColor: const Color(0xFF4285F4), // Changed from yellow to blue
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
@@ -92,10 +93,10 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   }
 
   /// Builds the content for the "My Listings" tab
-  /// Shows books where the current user is the owner
+  /// Shows all books where the current user is the owner
   Widget _buildMyListingsTab(String userId) {
     return StreamBuilder<List<BookListing>>(
-      stream: BookService().getUserBooks(userId), // Fetch books owned by the user
+      stream: BookService().getUserBooks(userId), // Fetch all books owned by the user
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -126,136 +127,22 @@ class _MyListingsScreenState extends State<MyListingsScreen>
             itemCount: books.length,
             itemBuilder: (context, index) {
               final book = books[index];
-              return Card(
-                color: const Color(0xFF1E1E3C),
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: InkWell(
-                  onTap: () {
-                    // Navigate to book detail screen
-                    Navigator.pushNamed(
-                      context,
-                      '/book_detail',
-                      arguments: book,
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        // Book Image
-                        Container(
-                          width: 80,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[800],
-                          ),
-                          child: book.imageUrl != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    book.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
-                                        Icons.book,
-                                        size: 30,
-                                        color: Colors.grey,
-                                      );
-                                    },
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.book,
-                                  size: 30,
-                                  color: Colors.grey,
-                                ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Book Info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                book.title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                book.author,
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: book.swapStatus == 'Available'
-                                          ? Colors.green.withOpacity(0.2)
-                                          : book.swapStatus == 'Pending'
-                                              ? Colors.orange.withOpacity(0.2)
-                                              : Colors.red.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      book.swapStatus,
-                                      style: TextStyle(
-                                        color: book.swapStatus == 'Available'
-                                            ? Colors.green
-                                            : book.swapStatus == 'Pending'
-                                                ? Colors.orange
-                                                : Colors.red,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '• ${book.condition}',
-                                    style: const TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (book.swapStatus == 'Pending' && book.requestedByName != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    'Requested by: ${book.requestedByName}',
-                                    style: const TextStyle(
-                                      color: Colors.orange,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              // Use the imported BookCard widget here
+              return BookCard(
+                title: book.title,
+                author: book.author,
+                condition: book.condition,
+                swapStatus: book.swapStatus,
+                imageUrl: book.imageUrl,
+                requestedByName: book.requestedByName,
+                onTap: () {
+                  // Navigate to book detail screen
+                  Navigator.pushNamed(
+                    context,
+                    '/book_detail',
+                    arguments: book,
+                  );
+                },
               );
             },
           ),
@@ -265,7 +152,8 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   }
 
   /// Builds the content for the "My Offers" tab
-  /// Shows books where the current user is the requester
+  /// Shows books where the current user is the requester (regardless of status)
+  /// Combines Pending and Completed swap requests
   Widget _buildMyOffersTab(String userId) {
     return StreamBuilder<List<BookListing>>(
       stream: BookService().getUserSwapRequests(userId), // Fetch books requested by the user
@@ -278,9 +166,9 @@ class _MyListingsScreenState extends State<MyListingsScreen>
           return Center(child: Text('Error loading offers: ${snapshot.error}'));
         }
 
-        List<BookListing> offeredBooks = snapshot.data ?? [];
+        List<BookListing> requestedBooks = snapshot.data ?? [];
 
-        if (offeredBooks.isEmpty) {
+        if (requestedBooks.isEmpty) {
           return const Center(
             child: Text(
               'No swap offers sent yet.\n\nBrowse listings to request a swap!',
@@ -296,10 +184,11 @@ class _MyListingsScreenState extends State<MyListingsScreen>
           },
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: offeredBooks.length,
+            itemCount: requestedBooks.length,
             itemBuilder: (context, index) {
-              final book = offeredBooks[index];
-              // Highlight that this is a book *the user requested*
+              final book = requestedBooks[index];
+              // Use the imported BookCard widget here, highlighting it as a requested book
+              // The BookCard will show the correct swap status (Pending, Completed, etc.)
               return Card(
                 color: const Color(0xFF1E1E3C),
                 margin: const EdgeInsets.only(bottom: 16),
@@ -319,18 +208,18 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        // Book Image
+                        // Book Image using CachedNetworkImage (from BookCard)
                         Container(
                           width: 80,
                           height: 100,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[800],
+                            color: Colors.grey[800], // Placeholder color while loading
                           ),
-                          child: book.imageUrl != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: book.imageUrl != null
+                                ? Image.network(
                                     book.imageUrl!,
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) {
@@ -340,16 +229,16 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                                         color: Colors.grey,
                                       );
                                     },
+                                  )
+                                : const Icon(
+                                    Icons.book,
+                                    size: 30,
+                                    color: Colors.grey,
                                   ),
-                                )
-                              : const Icon(
-                                  Icons.book,
-                                  size: 30,
-                                  color: Colors.grey,
-                                ),
+                          ),
                         ),
                         const SizedBox(width: 16),
-                        // Book Info
+                        // Book Info (similar to BookCard)
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,7 +255,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                book.author,
+                                'by ${book.ownerName}', // Show the *owner*'s name for requested books
                                 style: const TextStyle(
                                   color: Colors.grey,
                                   fontSize: 14,
@@ -383,21 +272,25 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: book.swapStatus == 'Available'
-                                          ? Colors.grey.withOpacity(0.2)
-                                          : book.swapStatus == 'Pending'
-                                              ? Colors.orange.withOpacity(0.2)
-                                              : Colors.green.withOpacity(0.2),
+                                      color: book.swapStatus == 'Pending'
+                                          ? Colors.orange.withOpacity(0.2)
+                                          : book.swapStatus == 'Completed'
+                                              ? Colors.green.withOpacity(0.2)
+                                              : Colors.grey.withOpacity(0.2), // For other statuses like 'Available' if somehow it appears here
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      book.swapStatus,
+                                      book.swapStatus == 'Pending'
+                                          ? 'Offer Sent' // Custom text for requested pending
+                                          : book.swapStatus == 'Completed'
+                                              ? 'Swap Accepted!' // Custom text for requested completed
+                                              : book.swapStatus, // Show original status for others
                                       style: TextStyle(
-                                        color: book.swapStatus == 'Available'
-                                            ? Colors.grey
-                                            : book.swapStatus == 'Pending'
-                                                ? Colors.orange
-                                                : Colors.green,
+                                        color: book.swapStatus == 'Pending'
+                                            ? Colors.orange
+                                            : book.swapStatus == 'Completed'
+                                                ? Colors.green
+                                                : Colors.grey, // For other statuses
                                         fontSize: 12,
                                       ),
                                     ),
@@ -412,31 +305,18 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                                   ),
                                 ],
                               ),
-                              // Show status of the user's request for this specific book
-                              // Use Provider.of here to access the authProvider within this builder
-                              Consumer<AuthProvider>(
-                                builder: (context, authProvider, child) {
-                                  bool isRequestedByCurrentUser = book.requestedBy == authProvider.currentUser?.uid;
-                                  if (isRequestedByCurrentUser) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        'Status: ${book.swapStatus == 'Pending' ? 'Offer Sent' : 'Offer ${book.swapStatus}'}',
-                                        style: TextStyle(
-                                          color: book.swapStatus == 'Pending'
-                                              ? Colors.orange
-                                              : book.swapStatus == 'Completed'
-                                                  ? Colors.green
-                                                  : Colors.grey,
-                                          fontSize: 12,
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                  return const SizedBox.shrink(); // Return empty widget if not requested by current user
-                                },
-                              ),
+                              // Optionally, show what the user offered for this specific book
+                              if (book.swapFor != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Offered for: ${book.swapFor}',
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),

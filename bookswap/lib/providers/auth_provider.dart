@@ -76,7 +76,7 @@ class AuthProvider with ChangeNotifier {
       }
     } catch (e) {
       // Print error to console for debugging
-      print('Error fetching user  $e');
+      debugPrint('AuthService: Sign up error: $e');
     }
   }
 

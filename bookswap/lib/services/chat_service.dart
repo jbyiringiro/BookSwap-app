@@ -15,8 +15,9 @@ class ChatService {
     return ids.join('_');
   }
 
-  /// Creates or retrieves a chat room ID for two users.
+  /// Creates or retrieves a chat room ID for two users involved in a swap.
   /// This method ensures the chat room document exists in Firestore.
+  /// It should be called when a swap is initiated or accepted.
   Future<String> getOrCreateChatRoomId(String userId1, String userId2) async {
     String chatRoomId = _generateChatRoomId(userId1, userId2);
 
@@ -30,73 +31,92 @@ class ChatService {
         'createdAt': Timestamp.now(),
         'lastMessage': null, // Initialize with no last message
       });
+      print('Created new chat room: $chatRoomId'); // Debug log
+    } else {
+      print('Found existing chat room: $chatRoomId'); // Debug log
     }
 
     return chatRoomId;
   }
 
+  /// Gets a stream of chat rooms for the current user.
+  /// Filters rooms where the user's ID is in the 'participants' array.
+  Stream<List<ChatRoom>> getUserChatRooms(String currentUserId) {
+    print('DEBUG: Fetching chat rooms for user: $currentUserId'); // Debug log
+    return _firestore
+        .collection('chat_rooms')
+        .where('participants', arrayContains: currentUserId)
+        .orderBy('lastMessage.timestamp', descending: true) // Order by last message time
+        .snapshots()
+        .map((snapshot) {
+      List<ChatRoom> rooms = [];
+      for (DocumentSnapshot doc in snapshot.docs) {
+        // Use the factory method to create ChatRoom objects
+        rooms.add(ChatRoom.fromFirestore(doc, currentUserId));
+      }
+      print('DEBUG: Retrieved ${rooms.length} chat rooms'); // Debug log
+      return rooms;
+    });
+  }
+
+  /// Gets a stream of messages for a specific chat room.
+  /// Orders messages by timestamp in ascending order (oldest first).
+  Stream<List<ChatMessage>> getChatMessages(String chatRoomId) {
+    print('DEBUG: Fetching messages for chat room: $chatRoomId'); // Debug log
+    return _firestore
+        .collection('chat_rooms')
+        .doc(chatRoomId)
+        .collection('messages') // Subcollection for messages
+        .orderBy('timestamp', descending: false) // Oldest first for chat display
+        .snapshots()
+        .map((snapshot) {
+      List<ChatMessage> messages = [];
+      for (DocumentSnapshot doc in snapshot.docs) {
+        // Use the factory method to create ChatMessage objects
+        messages.add(ChatMessage.fromFirestore(doc));
+      }
+      print('DEBUG: Retrieved ${messages.length} messages'); // Debug log
+      return messages;
+    });
+  }
+
   /// Sends a message to a specific chat room.
   /// Updates the message list in the subcollection and the 'lastMessage' field in the main room document.
   Future<void> sendMessage(String chatRoomId, String senderId, String text) async {
-    if (text.trim().isEmpty) return; // Don't send empty messages
+    if (text.trim().isEmpty) {
+      print('DEBUG: Cannot send empty message'); // Debug log
+      return; // Don't send empty messages
+    }
 
     try {
-      // Create a new message document in the 'messages' subcollection
+      print('DEBUG: Sending message to room: $chatRoomId, sender: $senderId, text: $text'); // Debug log
+
+      // Add the new message to the 'messages' subcollection
       DocumentReference newMessageRef = await _firestore
           .collection('chat_rooms')
           .doc(chatRoomId)
-          .collection('messages')
+          .collection('messages') // Subcollection for messages
           .add({
         'text': text.trim(),
         'senderId': senderId,
         'timestamp': Timestamp.now(),
       });
 
-      // Update the 'lastMessage' field in the main chat room document
+      // Update the main 'chat_rooms' document with the details of the new message
       // This allows quick fetching of the latest message for chat lists
       await _firestore.collection('chat_rooms').doc(chatRoomId).update({
         'lastMessage': {
-          'id': newMessageRef.id,
+          'id': newMessageRef.id, // Store the message ID
           'text': text.trim(),
           'senderId': senderId,
-          'timestamp': Timestamp.now(),
+          'timestamp': Timestamp.now(), // Use Firestore timestamp
         },
       });
+
+      print('DEBUG: Message sent successfully'); // Debug log
     } catch (e) {
-      print('Error sending message: $e');
-      rethrow; // Re-throw to be handled by the caller if needed
+      print('ERROR sending message: $e'); // Error log
+      rethrow; // Re-throw to be handled by the UI if needed
     }
-  }
-
-  /// Retrieves a stream of all chat rooms for the current user.
-  /// Filters rooms where the current user is listed as a participant.
-  Stream<List<ChatRoom>> getUserChatRooms(String currentUserId) {
-    return _firestore
-        .collection('chat_rooms')
-        .where('participants', arrayContains: currentUserId) // Query for rooms containing the user
-        .orderBy('lastMessage.timestamp', descending: true) // Order by last message time
-        .snapshots()
-        .map((snapshot) {
-      List<ChatRoom> chatRooms = [];
-      for (DocumentSnapshot doc in snapshot.docs) {
-        // Use the factory method to create ChatRoom objects
-        chatRooms.add(ChatRoom.fromFirestore(doc, currentUserId));
-      }
-      return chatRooms;
-    });
-  }
-
-  /// Retrieves a stream of messages for a specific chat room.
-  /// Orders messages by timestamp in ascending order (oldest first).
-  Stream<List<ChatMessage>> getChatMessages(String chatRoomId) {
-    return _firestore
-        .collection('chat_rooms')
-        .doc(chatRoomId)
-        .collection('messages')
-        .orderBy('timestamp', descending: false) // Oldest first for chat display
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) => ChatMessage.fromFirestore(doc)).toList();
-    });
   }
 }
