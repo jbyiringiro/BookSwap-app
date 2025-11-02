@@ -1,11 +1,18 @@
-import 'package:flutter/material.dart';
+// lib/widgets/book_card.dart
 
+import 'package:flutter/material.dart';
+// Import CachedNetworkImage
+import 'package:cached_network_image/cached_network_image.dart';
+
+/// Reusable widget to display a book listing card
+/// Shows book image, title, author, condition, and swap status
 class BookCard extends StatelessWidget {
   final String title;
   final String author;
   final String condition;
-  final String timeAgo;
-  final String imageUrl;
+  final String swapStatus;
+  final String? imageUrl; // Make imageUrl nullable
+  final String? requestedByName; // Name of user who requested the swap (if pending)
   final VoidCallback? onTap;
 
   const BookCard({
@@ -13,42 +20,60 @@ class BookCard extends StatelessWidget {
     required this.title,
     required this.author,
     required this.condition,
-    required this.timeAgo,
-    required this.imageUrl,
+    required this.swapStatus,
+    this.imageUrl, // Accept nullable imageUrl
+    this.requestedByName,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: const Color(0xFF1E1E3C),
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: InkWell(
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Book Image
+              // Book Image using CachedNetworkImage for better handling
               Container(
                 width: 80,
                 height: 100,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[800],
+                  color: Colors.grey[800], // Placeholder color while loading
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    imageUrl,
+                  child: CachedNetworkImage(
+                    // Use the imageUrl, or a placeholder if null
+                    imageUrl: imageUrl ?? '',
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
+                    // Placeholder widget while the image is loading
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey[800],
+                      child: const Icon(
                         Icons.book,
                         size: 30,
                         color: Colors.grey,
-                      );
-                    },
+                      ),
+                    ),
+                    // Error widget if the image fails to load
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[800],
+                      child: const Icon(
+                        Icons.book,
+                        size: 30,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    // Optional: Add fade-in animation
+                    fadeInDuration: const Duration(milliseconds: 300),
                   ),
                 ),
               ),
@@ -61,7 +86,7 @@ class BookCard extends StatelessWidget {
                     Text(
                       title,
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -87,20 +112,28 @@ class BookCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
+                            color: swapStatus == 'Available'
+                                ? Colors.green.withOpacity(0.2)
+                                : swapStatus == 'Pending'
+                                    ? Colors.orange.withOpacity(0.2)
+                                    : Colors.red.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            condition,
-                            style: const TextStyle(
-                              color: Colors.blue,
+                            swapStatus,
+                            style: TextStyle(
+                              color: swapStatus == 'Available'
+                                  ? Colors.green
+                                  : swapStatus == 'Pending'
+                                      ? Colors.orange
+                                      : Colors.red,
                               fontSize: 12,
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '• $timeAgo',
+                          '• $condition',
                           style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 12,
@@ -108,6 +141,17 @@ class BookCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (swapStatus == 'Pending' && requestedByName != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Requested by: $requestedByName',
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

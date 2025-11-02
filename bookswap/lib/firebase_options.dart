@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'bookswap-j-001.firebasestorage.app',
     measurementId: 'G-RX5P8QLVH6',
   );
+
 }

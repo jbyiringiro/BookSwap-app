@@ -1,3 +1,5 @@
+// lib/services/book_service.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
@@ -31,7 +33,7 @@ class BookService {
     required String ownerId,
     required String ownerName,
     String? swapFor,
-    File? imageFile,
+    File? imageFile, // Optional image file
   }) async {
     try {
       // Variable to store the uploaded image URL
@@ -39,13 +41,18 @@ class BookService {
       
       // Upload image if provided (with timeout)
       if (imageFile != null) {
+        print('DEBUG: Starting image upload for file: ${imageFile.path}'); // Debug log
         try {
           imageUrl = await _uploadImageWithTimeout(imageFile, ownerId);
+          print('DEBUG: Image upload successful, URL: $imageUrl'); // Debug log
         } catch (e) {
-          print('Error uploading image: $e');
-          // Continue without image instead of failing completely
-          imageUrl = null;
+          print('ERROR: Failed to upload image: $e'); // Error log
+          // Decide: Fail the whole operation or proceed without image
+          // For now, let's proceed without the image to avoid losing the listing
+          imageUrl = null; 
         }
+      } else {
+         print('DEBUG: No image file provided for upload'); // Debug log
       }
 
       // Create the book document in Firestore
@@ -55,7 +62,7 @@ class BookService {
         'condition': condition,
         'ownerId': ownerId,
         'ownerName': ownerName,
-        'imageUrl': imageUrl,
+        'imageUrl': imageUrl, // This will be null if upload failed or no image provided
         'createdAt': Timestamp.now(),
         'swapFor': swapFor,
         'swapStatus': 'Available',
@@ -63,11 +70,11 @@ class BookService {
         'requestedByName': null,
       });
 
-      print('Book created successfully with ID: ${docRef.id}');
+      print('DEBUG: Book created successfully with ID: ${docRef.id}, Image URL: $imageUrl');
       return true;
     } catch (e) {
       // Print error to console for debugging
-      print('Error creating book listing: $e');
+      print('ERROR: Error creating book listing: $e');
       return false;
     }
   }
@@ -75,46 +82,77 @@ class BookService {
   /// Uploads an image file to Firebase Storage with a timeout
   /// This prevents the app from hanging if the upload takes too long
   Future<String> _uploadImageWithTimeout(File imageFile, String ownerId) async {
-    return _uploadImage(imageFile, ownerId).timeout(
-      const Duration(seconds: 30), // 30-second timeout
-      onTimeout: () {
-        // Throw a timeout exception if upload takes too long
-        throw TimeoutException('Image upload took too long', const Duration(seconds: 30));
-      },
-    );
+    print('DEBUG: Entering _uploadImageWithTimeout'); // Debug log
+    try {
+        String result = await _uploadImage(imageFile, ownerId).timeout(
+          const Duration(seconds: 30), // 30-second timeout
+          onTimeout: () {
+            // Throw a timeout exception if upload takes too long
+            print('ERROR: Image upload timed out after 30 seconds'); // Error log
+            throw TimeoutException('Image upload took too long', const Duration(seconds: 30));
+          },
+        );
+        print('DEBUG: _uploadImageWithTimeout completed successfully'); // Debug log
+        return result;
+    } catch (e) {
+        print('ERROR: _uploadImageWithTimeout failed: $e'); // Error log
+        rethrow; // Rethrow the error so the calling function can handle it
+    }
   }
 
   /// Actual image upload function
   /// Uploads the image to Firebase Storage and returns the download URL
   Future<String> _uploadImage(File imageFile, String ownerId) async {
-    // Create a unique filename using owner ID and timestamp
-    String fileName = 'book_images/${ownerId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    
-    // Get a reference to the storage location
-    Reference storageRef = _storage.ref().child(fileName);
-    
-    // Start the upload process
-    UploadTask uploadTask = storageRef.putFile(imageFile);
-    
-    // Wait for the upload to complete
-    TaskSnapshot snapshot = await uploadTask;
-    
-    // Get the download URL for the uploaded image
-    String downloadUrl = await snapshot.ref.getDownloadURL();
-    
-    return downloadUrl;
+    print('DEBUG: Entering _uploadImage'); // Debug log
+    try {
+      // Validate the file exists
+      if (!await imageFile.exists()) {
+        print('ERROR: Image file does not exist at path: ${imageFile.path}'); // Error log
+        throw Exception('Image file does not exist');
+      }
+
+      // Get file size
+      int fileSize = await imageFile.length();
+      print('DEBUG: Image file size: ${fileSize ~/ 1024} KB'); // Debug log
+
+      // Create a unique filename using owner ID and timestamp
+      String fileName = 'book_images/${ownerId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      print('DEBUG: Generated filename: $fileName'); // Debug log
+      
+      // Get a reference to the storage location
+      Reference storageRef = _storage.ref().child(fileName);
+      
+      // Start the upload process
+      print('DEBUG: Starting upload to: $fileName'); // Debug log
+      UploadTask uploadTask = storageRef.putFile(imageFile);
+      
+      // Wait for the upload to complete
+      TaskSnapshot snapshot = await uploadTask;
+      print('DEBUG: Upload task completed'); // Debug log
+      
+      // Get the download URL for the uploaded image
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      print('DEBUG: Got download URL: $downloadUrl'); // Debug log
+      
+      return downloadUrl;
+    } catch (e) {
+      print('ERROR: _uploadImage failed: $e'); // Error log
+      rethrow; // Rethrow the error so the calling function can handle it
+    }
   }
 
   /// Gets all available book listings in real-time
   /// Filters for books where swapStatus is 'Available'
   /// Orders by creation date (newest first)
   Stream<List<BookListing>> getAvailableBooks() {
+    print('DEBUG: getAvailableBooks stream called'); // Debug log
     return _firestore
         .collection('books')
         .where('swapStatus', isEqualTo: 'Available')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
+      print('DEBUG: getAvailableBooks snapshot received with ${snapshot.docs.length} docs'); // Debug log
       return snapshot.docs.map((doc) => BookListing.fromFirestore(doc)).toList();
     });
   }
@@ -123,12 +161,14 @@ class BookService {
   /// Filters for books where ownerId matches the provided user ID
   /// Orders by creation date (newest first)
   Stream<List<BookListing>> getUserBooks(String userId) {
+    print('DEBUG: getUserBooks stream called for user: $userId'); // Debug log
     return _firestore
         .collection('books')
         .where('ownerId', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
+      print('DEBUG: getUserBooks snapshot received with ${snapshot.docs.length} docs'); // Debug log
       return snapshot.docs.map((doc) => BookListing.fromFirestore(doc)).toList();
     });
   }
@@ -155,6 +195,7 @@ class BookService {
       
       // Handle image upload if a new image is provided
       if (imageFile != null) {
+        print('DEBUG: Updating image for book: $bookId'); // Debug log
         try {
           // Create a new filename for the updated image
           String fileName = 'book_images/${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -171,9 +212,10 @@ class BookService {
           
           // Add the new image URL to the updates
           updates['imageUrl'] = imageUrl;
+          print('DEBUG: Updated image URL: $imageUrl'); // Debug log
         } catch (e) {
           // Print error and return false if image upload fails
-          print('Error uploading new image: $e');
+          print('ERROR: Failed to upload new image for update: $e'); // Error log
           return false;
         }
       }
@@ -183,7 +225,7 @@ class BookService {
       return true;
     } catch (e) {
       // Print error and return false if the update fails
-      print('Error updating book listing: $e');
+      print('ERROR: Failed to update book listing: $e'); // Error log
       return false;
     }
   }
@@ -196,7 +238,7 @@ class BookService {
       return true;
     } catch (e) {
       // Print error and return false if deletion fails
-      print('Error deleting book listing: $e');
+      print('ERROR: Failed to delete book listing: $e'); // Error log
       return false;
     }
   }
@@ -218,7 +260,7 @@ class BookService {
       return true;
     } catch (e) {
       // Print error and return false if the request fails
-      print('Error requesting swap: $e');
+      print('ERROR: Failed to request swap: $e'); // Error log
       return false;
     }
   }
@@ -234,7 +276,7 @@ class BookService {
       return true;
     } catch (e) {
       // Print error and return false if the acceptance fails
-      print('Error accepting swap: $e');
+      print('ERROR: Failed to accept swap: $e'); // Error log
       return false;
     }
   }
@@ -252,7 +294,7 @@ class BookService {
       return true;
     } catch (e) {
       // Print error and return false if the cancellation fails
-      print('Error canceling swap: $e');
+      print('ERROR: Failed to cancel swap: $e'); // Error log
       return false;
     }
   }
@@ -261,12 +303,14 @@ class BookService {
   /// Filters for books where requestedBy matches the provided user ID
   /// Orders by creation date (newest first)
   Stream<List<BookListing>> getUserSwapRequests(String userId) {
+    print('DEBUG: getUserSwapRequests stream called for user: $userId'); // Debug log
     return _firestore
         .collection('books')
         .where('requestedBy', isEqualTo: userId)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
+      print('DEBUG: getUserSwapRequests snapshot received with ${snapshot.docs.length} docs'); // Debug log
       return snapshot.docs.map((doc) => BookListing.fromFirestore(doc)).toList();
     });
   }

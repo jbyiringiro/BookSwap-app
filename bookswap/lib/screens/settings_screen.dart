@@ -122,7 +122,7 @@ class SettingsScreen extends StatelessWidget {
                     onChanged: (value) {
                       notificationProvider.setReminderEnabled(value); // Update provider and save
                     },
-                    activeColor: Colors.blue, // Changed from yellow (Color(0xFFE6B84D)) to blue
+                    activeColor: Colors.blue, 
                   );
                 },
               ),
@@ -135,7 +135,7 @@ class SettingsScreen extends StatelessWidget {
                     onChanged: (value) {
                       notificationProvider.setEmailUpdatesEnabled(value); // Update provider and save
                     },
-                    activeColor: Colors.blue, // Changed from yellow (Color(0xFFE6B84D)) to blue
+                    activeColor: Colors.blue, 
                   );
                 },
               ),
@@ -148,7 +148,7 @@ class SettingsScreen extends StatelessWidget {
                     onChanged: (value) {
                       themeProvider.toggleTheme(); // Toggle theme when switch is changed
                     },
-                    activeColor: Colors.blue, // Changed from yellow (Color(0xFFE6B84D)) to blue
+                    activeColor: Colors.blue, 
                   );
                 },
               ),
