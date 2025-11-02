@@ -96,7 +96,7 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   /// Shows all books where the current user is the owner
   Widget _buildMyListingsTab(String userId) {
     return StreamBuilder<List<BookListing>>(
-      stream: BookService().getUserBooks(userId), // Fetch all books owned by the user
+      stream: BookService().getUserBooks(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -119,36 +119,220 @@ class _MyListingsScreenState extends State<MyListingsScreen>
         }
 
         return RefreshIndicator(
-          onRefresh: () async {
-            // Refresh handled automatically by StreamBuilder
-          },
+          onRefresh: () async {},
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: books.length,
             itemBuilder: (context, index) {
               final book = books[index];
-              // Use the imported BookCard widget here
-              return BookCard(
-                title: book.title,
-                author: book.author,
-                condition: book.condition,
-                swapStatus: book.swapStatus,
-                imageUrl: book.imageUrl,
-                requestedByName: book.requestedByName,
-                onTap: () {
-                  // Navigate to book detail screen
-                  Navigator.pushNamed(
-                    context,
-                    '/book_detail',
-                    arguments: book,
-                  );
-                },
+              return Card(
+                color: const Color(0xFF1E1E3C),
+                margin: const EdgeInsets.only(bottom: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/book_detail',
+                      arguments: book,
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        // Book Image
+                        Container(
+                          width: 80,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.grey[800],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: book.imageUrl != null
+                                ? Image.network(
+                                    book.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return const Icon(
+                                        Icons.book,
+                                        size: 30,
+                                        color: Colors.grey,
+                                      );
+                                    },
+                                  )
+                                : const Icon(
+                                    Icons.book,
+                                    size: 30,
+                                    color: Colors.grey,
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Book Info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                book.title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'by ${book.author}',
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: book.swapStatus == 'Available'
+                                          ? Colors.green.withOpacity(0.2)
+                                          : book.swapStatus == 'Pending'
+                                              ? Colors.orange.withOpacity(0.2)
+                                              : Colors.red.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      book.swapStatus,
+                                      style: TextStyle(
+                                        color: book.swapStatus == 'Available'
+                                            ? Colors.green
+                                            : book.swapStatus == 'Pending'
+                                                ? Colors.orange
+                                                : Colors.red,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '• ${book.condition}',
+                                    style: const TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Edit and Delete Buttons
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              Navigator.pushNamed(
+                                context,
+                                '/edit_book',
+                                arguments: book,
+                              );
+                            } else if (value == 'delete') {
+                              _showDeleteConfirmation(context, book.id);
+                            }
+                          },
+                          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                            const PopupMenuItem<String>(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit, color: Colors.blue),
+                                  SizedBox(width: 8),
+                                  Text('Edit'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem<String>(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text('Delete'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               );
             },
           ),
         );
       },
     );
+  }
+
+  /// Shows delete confirmation dialog
+  void _showDeleteConfirmation(BuildContext context, String bookId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Book'),
+          content: const Text('Are you sure you want to delete this book listing?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteBook(bookId);
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Deletes a book listing
+  void _deleteBook(String bookId) async {
+    final bookService = BookService();
+    bool success = await bookService.deleteBookListing(bookId);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Book deleted successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to delete book. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   /// Builds the content for the "My Offers" tab

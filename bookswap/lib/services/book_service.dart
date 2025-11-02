@@ -46,13 +46,16 @@ class BookService {
       // Upload image if provided (with timeout)
       if (imageFile != null) {
         try {
+          print('DEBUG: Image file selected. Starting upload...'); // Debug log
           imageUrl = await _uploadImageWithTimeout(imageFile, ownerId);
+          print('DEBUG: Image URL received: $imageUrl'); // Debug log
         } catch (e) {
-          print('Error uploading image: $e');
-          // Decide: Fail the whole operation or proceed without image
-          // For now, let's proceed without the image to avoid losing the listing
+          print('ERROR uploading image: $e');
+          // Proceed without image to avoid losing the listing
           imageUrl = null; 
         }
+      } else {
+        print('DEBUG: No image file provided'); // Debug log
       }
 
       // Create the book document in Firestore
@@ -70,11 +73,10 @@ class BookService {
         'requestedByName': null,
       });
 
-      print('Book created successfully with ID: ${docRef.id}');
+      print('DEBUG: Book created successfully with ID: ${docRef.id}, imageUrl: $imageUrl'); // Debug log
       return true;
     } catch (e) {
-      // Print error to console for debugging
-      print('Error creating book listing: $e');
+      print('ERROR creating book listing: $e');
       return false;
     }
   }
@@ -99,22 +101,33 @@ class BookService {
       throw Exception('Image file does not exist');
     }
 
-    // Create a unique filename using owner ID and timestamp
-    String fileName = 'book_images/${ownerId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    
-    // Get a reference to the storage location
-    Reference storageRef = _storage.ref().child(fileName);
-    
-    // Start the upload process
-    UploadTask uploadTask = storageRef.putFile(imageFile);
-    
-    // Wait for the upload to complete
-    TaskSnapshot snapshot = await uploadTask;
-    
-    // Get the download URL for the uploaded image
-    String downloadUrl = await snapshot.ref.getDownloadURL();
-    
-    return downloadUrl;
+    try {
+      // Create a unique filename using owner ID and timestamp
+      String fileName = 'book_images/${ownerId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      
+      print('DEBUG: Starting image upload to path: $fileName'); // Debug log
+      
+      // Get a reference to the storage location
+      Reference storageRef = _storage.ref().child(fileName);
+      
+      // Start the upload process
+      UploadTask uploadTask = storageRef.putFile(imageFile);
+      
+      // Wait for the upload to complete
+      TaskSnapshot snapshot = await uploadTask;
+      
+      print('DEBUG: Upload task completed. State: ${snapshot.state}'); // Debug log
+      
+      // Get the download URL for the uploaded image
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      print('DEBUG: Image uploaded successfully. URL: $downloadUrl'); // Debug log
+      
+      return downloadUrl;
+    } catch (e) {
+      print('ERROR: Image upload failed: $e'); // Error log
+      rethrow;
+    }
   }
 
   /// Gets all available book listings in real-time

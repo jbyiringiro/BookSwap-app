@@ -18,7 +18,7 @@ class ChatService {
   /// Creates or retrieves a chat room ID for two users involved in a swap.
   /// This method ensures the chat room document exists in Firestore.
   /// It should be called when a swap is initiated or accepted.
-  Future<String> getOrCreateChatRoomId(String userId1, String userId2) async {
+  Future<String> getOrCreateChatRoomId(String userId1, String userId2, {String? user1Name, String? user2Name}) async {
     String chatRoomId = _generateChatRoomId(userId1, userId2);
 
     // Check if the chat room already exists
@@ -30,6 +30,10 @@ class ChatService {
         'participants': [userId1, userId2], // Store both UIDs
         'createdAt': Timestamp.now(),
         'lastMessage': null, // Initialize with no last message
+        'user1Id': userId1,
+        'user1Name': user1Name ?? 'User',
+        'user2Id': userId2,
+        'user2Name': user2Name ?? 'User',
       });
       print('Created new chat room: $chatRoomId'); // Debug log
     } else {
@@ -46,13 +50,52 @@ class ChatService {
     return _firestore
         .collection('chat_rooms')
         .where('participants', arrayContains: currentUserId)
-        .orderBy('lastMessage.timestamp', descending: true) // Order by last message time
+        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) {
+        .asyncMap((snapshot) async {
       List<ChatRoom> rooms = [];
       for (DocumentSnapshot doc in snapshot.docs) {
-        // Use the factory method to create ChatRoom objects
-        rooms.add(ChatRoom.fromFirestore(doc, currentUserId));
+        final data = doc.data() as Map<String, dynamic>;
+        
+        // Handle missing user1Id/user2Id by falling back to participants array
+        String user1Id = data['user1Id'] ?? (data['participants'] is List && data['participants'].length > 0 ? data['participants'][0] : null);
+        String user2Id = data['user2Id'] ?? (data['participants'] is List && data['participants'].length > 1 ? data['participants'][1] : null);
+        
+        // Skip if we can't determine participants
+        if (user1Id == null || user2Id == null) {
+          print('DEBUG: Skipping chat room ${doc.id} - missing participant data');
+          continue;
+        }
+        
+        String otherUserId = (user1Id == currentUserId) ? user2Id : user1Id;
+        
+        String? otherUserName = (user1Id == currentUserId)
+            ? data['user2Name']
+            : data['user1Name'];
+
+        // If otherUserName is still null, fetch from users collection
+        if (otherUserName == null || otherUserName.isEmpty) {
+          try {
+            DocumentSnapshot userDoc = await _firestore.collection('users').doc(otherUserId).get();
+            final userData = userDoc.data() as Map<String, dynamic>?;
+            otherUserName = userData?['displayName'] ?? 'User';
+          } catch (e) {
+            otherUserName = 'User';
+          }
+        }
+
+        // Create ChatRoom with the fetched name
+        final chatRoom = ChatRoom.fromFirestore(doc, currentUserId);
+        rooms.add(ChatRoom(
+          id: chatRoom.id,
+          participants: chatRoom.participants,
+          currentUserId: chatRoom.currentUserId,
+          otherUserId: otherUserId,
+          otherUserName: otherUserName,
+          lastMessageTimestamp: chatRoom.lastMessageTimestamp,
+          lastMessageText: chatRoom.lastMessageText,
+          lastMessageSenderId: chatRoom.lastMessageSenderId,
+        ));
       }
       print('DEBUG: Retrieved ${rooms.length} chat rooms'); // Debug log
       return rooms;

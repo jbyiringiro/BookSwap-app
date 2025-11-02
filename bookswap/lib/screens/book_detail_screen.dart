@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/book_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/book_service.dart';
+import '../services/chat_service.dart';
 import '../widgets/bottom_nav_bar.dart';
 
 /// Screen displaying detailed information about a specific book listing.
@@ -64,6 +65,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                             widget.book.imageUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
+                              print('DEBUG: Image load error for ${widget.book.imageUrl}: $error');
                               return const Icon(
                                 Icons.book,
                                 size: 80,
@@ -299,6 +301,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
   /// Handles accepting a swap request for the book (owner action)
   Future<void> _acceptSwap() async {
     final bookService = BookService();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
     setState(() {
       _isLoading = true;
@@ -307,14 +310,21 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
     bool success = await bookService.acceptSwap(widget.book.id);
 
     if (success) {
-      // Show success message
+      // Create or get chat room with user names
+      String currentUserName = authProvider.currentUser?.displayName ?? 'User';
+      await ChatService().getOrCreateChatRoomId(
+        authProvider.currentUser!.uid,
+        widget.book.requestedBy ?? '',
+        user1Name: currentUserName,
+        user2Name: widget.book.requestedByName,
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Swap accepted successfully!'),
           backgroundColor: Colors.green,
         ),
       );
-      // Navigate back after success
       Navigator.pop(context);
     } else {
       // Show error message

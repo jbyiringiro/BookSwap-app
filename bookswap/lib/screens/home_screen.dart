@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           return StreamBuilder<List<BookListing>>(
-            stream: BookService().getAvailableBooks(), // CRITICAL: Only fetches 'Available' books
+            stream: BookService().getAvailableBooks(), // Only fetches 'Available' books
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -137,7 +137,7 @@ class BookSearchDelegate extends SearchDelegate<String> {
 
   @override
   Widget buildResults(BuildContext context) {
-    return Container(); // We'll handle results in the home screen
+    return Container(); //handle results in the home screen
   }
 
   @override

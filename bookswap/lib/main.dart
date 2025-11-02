@@ -1,11 +1,9 @@
 // lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
-// Import the new NotificationProvider
 import 'providers/notification_provider.dart';
 import 'firebase_options.dart';
 import 'screens/welcome_screen.dart';
@@ -15,12 +13,13 @@ import 'screens/chat_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/post_book_screen.dart';
 import 'screens/book_detail_screen.dart';
+import 'screens/edit_book_screen.dart';
 import 'models/book_model.dart';
-// Import Forgot Password Screen
-import 'screens/auth/forgot_password_screen.dart';
 
+//Initializes Firebase and sets up the main app structure with providers.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -38,15 +37,13 @@ class BookSwapApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        // Add the NotificationProvider
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()), // Notification provider
       ],
       child: Consumer<ThemeProvider>( // Consumer to watch for theme changes
         builder: (context, themeProvider, child) {
           return MaterialApp(
             title: 'BookSwap',
-            // Use the theme provided by ThemeProvider
-            theme: themeProvider.currentTheme,
+            theme: themeProvider.currentTheme, // Apply the current theme
             debugShowCheckedModeBanner: false,
             home: const WelcomeScreen(),
             routes: {
@@ -57,7 +54,6 @@ class BookSwapApp extends StatelessWidget {
               '/login': (context) => const LoginScreen(),
               '/signup': (context) => const SignUpScreen(),
               '/post_book': (context) => const PostBookScreen(),
-              // Add Forgot Password route
               '/forgot_password': (context) => const ForgotPasswordScreen(),
             },
             onGenerateRoute: (settings) {
@@ -65,6 +61,11 @@ class BookSwapApp extends StatelessWidget {
                 final BookListing book = settings.arguments as BookListing;
                 return MaterialPageRoute(
                   builder: (context) => BookDetailScreen(book: book),
+                );
+              } else if (settings.name == '/edit_book') {
+                final BookListing book = settings.arguments as BookListing;
+                return MaterialPageRoute(
+                  builder: (context) => EditBookScreen(book: book),
                 );
               }
               return null;

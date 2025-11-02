@@ -16,6 +16,9 @@ class ChatRoom {
   /// UID of the other user in the chat.
   final String otherUserId;
 
+  /// Name of the other user in the chat.
+  final String? otherUserName;
+
   /// Timestamp of the last message in this room.
   final DateTime? lastMessageTimestamp;
 
@@ -30,6 +33,7 @@ class ChatRoom {
     required this.participants,
     required this.currentUserId,
     required this.otherUserId,
+    this.otherUserName,
     this.lastMessageTimestamp,
     this.lastMessageText,
     this.lastMessageSenderId,
@@ -52,6 +56,7 @@ class ChatRoom {
       participants: List<String>.from(data['participants']),
       currentUserId: currentUserId,
       otherUserId: otherUserId,
+      otherUserName: data['otherUserName'],
       lastMessageTimestamp: (lastMessageData?['timestamp'] as Timestamp?)?.toDate(),
       lastMessageText: lastMessageData?['text'],
       lastMessageSenderId: lastMessageData?['senderId'],

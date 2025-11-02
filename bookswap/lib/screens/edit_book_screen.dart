@@ -1,34 +1,42 @@
-// lib/screens/post_book_screen.dart
+// lib/screens/edit_book_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'dart:io';
-// Add imports for kIsWeb and Uint8List
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart'; // Contains kIsWeb
+import 'package:flutter/foundation.dart';
 import '../services/book_service.dart';
-import '../providers/auth_provider.dart';
-import '../widgets/bottom_nav_bar.dart';
+import '../models/book_model.dart';
 
-class PostBookScreen extends StatefulWidget {
-  const PostBookScreen({super.key});
+class EditBookScreen extends StatefulWidget {
+  final BookListing book;
+
+  const EditBookScreen({super.key, required this.book});
 
   @override
-  State<PostBookScreen> createState() => _PostBookScreenState();
+  State<EditBookScreen> createState() => _EditBookScreenState();
 }
 
-class _PostBookScreenState extends State<PostBookScreen> {
+class _EditBookScreenState extends State<EditBookScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _authorController = TextEditingController();
-  final _swapForController = TextEditingController();
-  String _selectedCondition = 'Good';
+  late TextEditingController _titleController;
+  late TextEditingController _authorController;
+  late TextEditingController _swapForController;
+  late String _selectedCondition;
   File? _selectedImage;
-  Uint8List? _selectedImageBytes; //for web support
+  Uint8List? _selectedImageBytes;
   bool _isLoading = false;
 
   final List<String> _conditions = ['New', 'Like New', 'Good', 'Used'];
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.book.title);
+    _authorController = TextEditingController(text: widget.book.author);
+    _swapForController = TextEditingController(text: widget.book.swapFor ?? '');
+    _selectedCondition = widget.book.condition;
+  }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -36,9 +44,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
 
     if (pickedFile != null) {
       try {
-        // Read the image bytes
         final imageBytes = await pickedFile.readAsBytes();
-        
         setState(() {
           _selectedImage = File(pickedFile.path);
           _selectedImageBytes = imageBytes;
@@ -55,35 +61,19 @@ class _PostBookScreenState extends State<PostBookScreen> {
     }
   }
 
-  Future<void> _postBook() async {
+  Future<void> _updateBook() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final bookService = BookService();
 
-      // Check if email is verified before attempting to post
-      if (!authProvider.isEmailVerified()) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Please verify your email address before posting a book.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-        return; // Exit the function if email is not verified
-      }
-
-      bool success = await bookService.createBookListing(
+      bool success = await bookService.updateBookListing(
+        bookId: widget.book.id,
         title: _titleController.text.trim(),
         author: _authorController.text.trim(),
         condition: _selectedCondition,
-        ownerId: authProvider.currentUser!.uid,
-        ownerName: authProvider.currentUser!.displayName ?? 'User',
         swapFor: _swapForController.text.trim(),
         imageFile: _selectedImage,
       );
@@ -91,7 +81,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Book posted successfully!'),
+            content: Text('Book updated successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -99,7 +89,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to post book. Please try again.'),
+            content: Text('Failed to update book. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -113,49 +103,9 @@ class _PostBookScreenState extends State<PostBookScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Add a check here as well, maybe redirect or show a message if not verified
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    if (!authProvider.isEmailVerified()) {
-        // Option 1: Redirect back or show a message
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-            ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Please verify your email address first.'),
-                backgroundColor: Colors.orange,
-            ),
-            );
-            // Navigator.pop(context); // Go back if not verified
-        });
-        // Option 2: Show a locked UI
-        return Scaffold(
-        appBar: AppBar(title: Text('Post a Book')),
-        body: Center(
-            child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-                Icon(Icons.lock_outline, size: 64, color: Colors.grey),
-                SizedBox(height: 16),
-                Text(
-                'Email Verification Required',
-                style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
-                TextButton(
-                onPressed: () {
-                    authProvider.sendEmailVerification();
-                    // Optionally navigate to settings
-                    // Navigator.pushNamed(context, '/profile');
-                },
-                child: Text('Resend Verification Email'),
-                ),
-            ],
-            ),
-        ),
-        );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Post a Book'),
+        title: const Text('Edit Book'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -176,9 +126,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
                     color: Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _selectedImage != null
-                          ? Colors.blue
-                          : Colors.grey,
+                      color: _selectedImageBytes != null ? Colors.blue : Colors.grey,
                       width: 2,
                     ),
                   ),
@@ -188,34 +136,40 @@ class _PostBookScreenState extends State<PostBookScreen> {
                           child: Image.memory(
                             _selectedImageBytes!,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              print('DEBUG: Image error: $error');
-                              return const Icon(
-                                Icons.book,
-                                size: 30,
-                                color: Colors.grey,
-                              );
-                            },
                           ),
                         )
-                      : const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.camera_alt,
-                              size: 48,
-                              color: Colors.blue,
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Tap to add book photo',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontSize: 16,
+                      : widget.book.imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                widget.book.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.camera_alt, size: 48, color: Colors.blue),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Tap to change photo',
+                                        style: TextStyle(color: Colors.blue, fontSize: 16),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
+                            )
+                          : const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.camera_alt, size: 48, color: Colors.blue),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Tap to add photo',
+                                  style: TextStyle(color: Colors.blue, fontSize: 16),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -224,7 +178,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
               const Text('Book Title', style: TextStyle(fontWeight: FontWeight.bold)),
               TextFormField(
                 controller: _titleController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Enter book title',
                 ),
@@ -241,7 +195,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
               const Text('Author', style: TextStyle(fontWeight: FontWeight.bold)),
               TextFormField(
                 controller: _authorController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'Enter author name',
                 ),
@@ -258,7 +212,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
               const Text('Swap For', style: TextStyle(fontWeight: FontWeight.bold)),
               TextFormField(
                 controller: _swapForController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'What you want in exchange',
                 ),
@@ -283,29 +237,27 @@ class _PostBookScreenState extends State<PostBookScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Post Button
+              // Update Button
               Center(
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _postBook,
+                  onPressed: _isLoading ? null : _updateBook,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue, // Changed from yellow (Color(0xFFE6B84D)) to blue
-                    foregroundColor: Colors.black, // Keep text black for contrast
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(horizontal: 120, vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.black) // Keep spinner color for contrast
-                      : const Text('Post'),
+                      ? const CircularProgressIndicator(color: Colors.black)
+                      : const Text('Update'),
                 ),
               ),
             ],
           ),
         ),
       ),
-      // Note: Removed BottomNavBar from PostBookScreen if it was intended as a modal/popup
-      // bottomNavigationBar: BottomNavBar(selectedIndex: 1),
     );
   }
 

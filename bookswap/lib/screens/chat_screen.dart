@@ -98,7 +98,7 @@ class ChatRoomCard extends StatelessWidget {
           child: const Icon(Icons.person, color: Colors.grey),
         ),
         title: Text(
-          otherUserId, // In a real app, you might fetch the other user's name from Firestore
+          chatRoom.otherUserName ?? otherUserId,
           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         subtitle: Text(
