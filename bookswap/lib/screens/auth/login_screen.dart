@@ -31,6 +31,9 @@ class _LoginScreenState extends State<LoginScreen> {
   // State to toggle password visibility
   bool _obscurePassword = true;
 
+  // Error message to display under password field
+  String? _passwordError;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,9 +47,10 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               const Text(
                 'Welcome Back',
                 style: TextStyle(
@@ -100,7 +104,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   focusedBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
-                    borderSide: BorderSide(color: Colors.blue, width: 2), // Changed to blue
+                    borderSide: BorderSide(color: Colors.blue, width: 2),
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide(color: Colors.red.shade400, width: 2),
                   ),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -113,6 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       });
                     },
                   ),
+                  errorText: _passwordError,
                 ),
                 style: const TextStyle(color: Colors.white),
                 validator: (value) {
@@ -191,6 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ],
+            ),
           ),
         ),
       ),
@@ -200,6 +214,11 @@ class _LoginScreenState extends State<LoginScreen> {
   /// Handles the login process
   /// Validates form, calls AuthProvider.signIn, handles success/failure including email verification
   Future<void> _handleLogin() async {
+    // Clear any previous password errors
+    setState(() {
+      _passwordError = null;
+    });
+
     // Validate the form before proceeding
     if (_formKey.currentState!.validate()) {
       // Set loading state to true
@@ -220,20 +239,15 @@ class _LoginScreenState extends State<LoginScreen> {
         // Navigate to home screen if login is successful
         Navigator.pushReplacementNamed(context, '/home');
       } else {
-        // Show error message based on the result
-        // This handles email verification, wrong password, etc.
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message), // Use the message from AuthResult
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+        // Show error under password field
+        setState(() {
+          _passwordError = 'Email or password is incorrect';
+          _isLoading = false;
+        });
 
-      // Reset loading state
-      setState(() {
-        _isLoading = false;
-      });
+        // Trigger form validation to display the error
+        _formKey.currentState!.validate();
+      }
     }
   }
 

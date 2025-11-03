@@ -1,6 +1,7 @@
 // lib/services/chat_service.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/chat_model.dart';
 
 /// Service class for handling chat operations with Firebase Firestore.
@@ -35,9 +36,9 @@ class ChatService {
         'user2Id': userId2,
         'user2Name': user2Name ?? 'User',
       });
-      print('Created new chat room: $chatRoomId'); // Debug log
+      debugPrint('Created new chat room: $chatRoomId'); // Debug log
     } else {
-      print('Found existing chat room: $chatRoomId'); // Debug log
+      debugPrint('Found existing chat room: $chatRoomId'); // Debug log
     }
 
     return chatRoomId;
@@ -46,7 +47,7 @@ class ChatService {
   /// Gets a stream of chat rooms for the current user.
   /// Filters rooms where the user's ID is in the 'participants' array.
   Stream<List<ChatRoom>> getUserChatRooms(String currentUserId) {
-    print('DEBUG: Fetching chat rooms for user: $currentUserId'); // Debug log
+    debugPrint('DEBUG: Fetching chat rooms for user: $currentUserId'); // Debug log
     return _firestore
         .collection('chat_rooms')
         .where('participants', arrayContains: currentUserId)
@@ -58,12 +59,12 @@ class ChatService {
         final data = doc.data() as Map<String, dynamic>;
         
         // Handle missing user1Id/user2Id by falling back to participants array
-        String user1Id = data['user1Id'] ?? (data['participants'] is List && data['participants'].length > 0 ? data['participants'][0] : null);
-        String user2Id = data['user2Id'] ?? (data['participants'] is List && data['participants'].length > 1 ? data['participants'][1] : null);
+        String? user1Id = data['user1Id'] ?? (data['participants'] is List && (data['participants'] as List).isNotEmpty ? (data['participants'] as List)[0] : null);
+        String? user2Id = data['user2Id'] ?? (data['participants'] is List && (data['participants'] as List).length > 1 ? (data['participants'] as List)[1] : null);
         
         // Skip if we can't determine participants
         if (user1Id == null || user2Id == null) {
-          print('DEBUG: Skipping chat room ${doc.id} - missing participant data');
+          debugPrint('DEBUG: Skipping chat room ${doc.id} - missing participant data');
           continue;
         }
         
@@ -97,7 +98,7 @@ class ChatService {
           lastMessageSenderId: chatRoom.lastMessageSenderId,
         ));
       }
-      print('DEBUG: Retrieved ${rooms.length} chat rooms'); // Debug log
+      debugPrint('DEBUG: Retrieved ${rooms.length} chat rooms'); // Debug log
       return rooms;
     });
   }
@@ -105,7 +106,7 @@ class ChatService {
   /// Gets a stream of messages for a specific chat room.
   /// Orders messages by timestamp in ascending order (oldest first).
   Stream<List<ChatMessage>> getChatMessages(String chatRoomId) {
-    print('DEBUG: Fetching messages for chat room: $chatRoomId'); // Debug log
+    debugPrint('DEBUG: Fetching messages for chat room: $chatRoomId'); // Debug log
     return _firestore
         .collection('chat_rooms')
         .doc(chatRoomId)
@@ -118,7 +119,7 @@ class ChatService {
         // Use the factory method to create ChatMessage objects
         messages.add(ChatMessage.fromFirestore(doc));
       }
-      print('DEBUG: Retrieved ${messages.length} messages'); // Debug log
+      debugPrint('DEBUG: Retrieved ${messages.length} messages'); // Debug log
       return messages;
     });
   }
@@ -127,12 +128,12 @@ class ChatService {
   /// Updates the message list in the subcollection and the 'lastMessage' field in the main room document.
   Future<void> sendMessage(String chatRoomId, String senderId, String text) async {
     if (text.trim().isEmpty) {
-      print('DEBUG: Cannot send empty message'); // Debug log
+      debugPrint('DEBUG: Cannot send empty message'); // Debug log
       return; // Don't send empty messages
     }
 
     try {
-      print('DEBUG: Sending message to room: $chatRoomId, sender: $senderId, text: $text'); // Debug log
+      debugPrint('DEBUG: Sending message to room: $chatRoomId, sender: $senderId, text: $text'); // Debug log
 
       // Add the new message to the 'messages' subcollection
       DocumentReference newMessageRef = await _firestore
@@ -156,9 +157,9 @@ class ChatService {
         },
       });
 
-      print('DEBUG: Message sent successfully'); // Debug log
+      debugPrint('DEBUG: Message sent successfully'); // Debug log
     } catch (e) {
-      print('ERROR sending message: $e'); // Error log
+      debugPrint('ERROR sending message: $e'); // Error log
       rethrow; // Re-throw to be handled by the UI if needed
     }
   }

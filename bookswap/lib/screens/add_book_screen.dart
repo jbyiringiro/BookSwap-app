@@ -170,7 +170,7 @@ class _AddBookScreenState extends State<AddBookScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedCondition,
+                initialValue: _selectedCondition,
                 decoration: const InputDecoration(
                   labelText: 'Book Condition',
                   labelStyle: TextStyle(color: Colors.grey),

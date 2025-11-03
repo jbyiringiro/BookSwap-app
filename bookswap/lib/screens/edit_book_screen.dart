@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../services/book_service.dart';
 import '../models/book_model.dart';
@@ -50,7 +49,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
           _selectedImageBytes = imageBytes;
         });
       } catch (e) {
-        print('Error reading image: $e');
+        debugPrint('Error reading image: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading image: $e'),
@@ -123,7 +122,7 @@ class _EditBookScreenState extends State<EditBookScreen> {
                 child: Container(
                   height: 200,
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _selectedImageBytes != null ? Colors.blue : Colors.grey,

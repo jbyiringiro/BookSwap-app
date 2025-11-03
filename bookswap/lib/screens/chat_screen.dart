@@ -203,13 +203,13 @@ class ChatDetailScreen extends StatelessWidget {
 
   /// Builds the message input field and send button.
   Widget _buildMessageInput(BuildContext context, String currentUserId) {
-    final _controller = TextEditingController();
+    final controller = TextEditingController();
 
-    void _sendMessage() {
-      String text = _controller.text.trim();
+    void sendMessage() {
+      String text = controller.text.trim();
       if (text.isNotEmpty) {
         ChatService().sendMessage(chatRoomId, currentUserId, text);
-        _controller.clear();
+        controller.clear();
       }
     }
 
@@ -219,7 +219,7 @@ class ChatDetailScreen extends StatelessWidget {
         children: [
           Expanded(
             child: TextField(
-              controller: _controller,
+              controller: controller,
               decoration: InputDecoration(
                 hintText: 'Type a message...',
                 border: OutlineInputBorder(
@@ -227,12 +227,12 @@ class ChatDetailScreen extends StatelessWidget {
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               ),
-              onSubmitted: (_) => _sendMessage(), // Send on press Enter/Done
+              onSubmitted: (_) => sendMessage(), // Send on press Enter/Done
             ),
           ),
           const SizedBox(width: 8),
           FloatingActionButton(
-            onPressed: _sendMessage,
+            onPressed: sendMessage,
             backgroundColor: Colors.blue, // Changed from yellow (Color(0xFFE6B84D)) to blue
             child: const Icon(Icons.send),
           ),

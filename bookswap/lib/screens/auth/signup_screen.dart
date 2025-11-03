@@ -27,6 +27,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   // Loading state to prevent multiple submissions
   bool _isLoading = false;
 
+  // State to toggle password visibility
+  bool _obscurePassword = true;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,9 +43,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               const Text(
                 'Create Account',
                 style: TextStyle(
@@ -110,19 +114,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
               // Password input field
               TextFormField(
                 controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
                   labelText: 'Password',
-                  labelStyle: TextStyle(color: Colors.grey),
+                  labelStyle: const TextStyle(color: Colors.grey),
                   filled: true,
-                  fillColor: Color(0xFF1E1E3C),
-                  border: OutlineInputBorder(
+                  fillColor: const Color(0xFF1E1E3C),
+                  border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide.none,
                   ),
-                  focusedBorder: OutlineInputBorder(
+                  focusedBorder: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     borderSide: BorderSide(color: Colors.blue, width: 2), // Changed to blue
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
                   ),
                 ),
                 style: const TextStyle(color: Colors.white),
@@ -182,6 +197,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ],
               ),
             ],
+            ),
           ),
         ),
       ),

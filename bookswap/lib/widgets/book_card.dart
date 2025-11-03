@@ -113,10 +113,10 @@ class BookCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: swapStatus == 'Available'
-                                ? Colors.green.withOpacity(0.2)
+                                ? Colors.green.withValues(alpha: 0.2)
                                 : swapStatus == 'Pending'
-                                    ? Colors.orange.withOpacity(0.2)
-                                    : Colors.red.withOpacity(0.2), // Could be grey for 'Completed'
+                                    ? Colors.orange.withValues(alpha: 0.2)
+                                    : Colors.red.withValues(alpha: 0.2), // Could be grey for 'Completed'
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(

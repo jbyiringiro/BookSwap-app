@@ -1,6 +1,7 @@
 // lib/screens/book_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import '../models/book_model.dart';
 import '../providers/auth_provider.dart';
@@ -65,7 +66,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                             widget.book.imageUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
-                              print('DEBUG: Image load error for ${widget.book.imageUrl}: $error');
+                              debugPrint('DEBUG: Image load error for ${widget.book.imageUrl}: $error');
                               return const Icon(
                                 Icons.book,
                                 size: 80,
@@ -145,10 +146,10 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: widget.book.swapStatus == 'Available'
-                            ? Colors.green.withOpacity(0.2)
+                            ? Colors.green.withValues(alpha: 0.2)
                             : widget.book.swapStatus == 'Pending'
-                                ? Colors.orange.withOpacity(0.2)
-                                : Colors.red.withOpacity(0.2),
+                                ? Colors.orange.withValues(alpha: 0.2)
+                                : Colors.red.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -274,7 +275,7 @@ class _BookDetailScreenState extends State<BookDetailScreen> {
       bool success = await bookService.requestSwap(
         bookId: widget.book.id, // The ID of the book being requested
         requesterId: authProvider.currentUser!.uid, // The ID of the user requesting
-        requesterName: authProvider.currentUser!.displayName ?? 'User', // The name of the user requesting
+        requesterName: authProvider.currentUser?.displayName ?? '', // The name of the user requesting
         ownerId: widget.book.ownerId, // Pass the owner ID of the book being requested
       );
 

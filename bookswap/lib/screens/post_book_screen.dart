@@ -4,12 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
-// Add imports for kIsWeb and Uint8List
-import 'dart:typed_data';
+// Add imports for kIsWeb
 import 'package:flutter/foundation.dart'; // Contains kIsWeb
 import '../services/book_service.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/bottom_nav_bar.dart';
 
 class PostBookScreen extends StatefulWidget {
   const PostBookScreen({super.key});
@@ -44,7 +42,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
           _selectedImageBytes = imageBytes;
         });
       } catch (e) {
-        print('Error reading image: $e');
+        debugPrint('Error reading image: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading image: $e'),
@@ -67,7 +65,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
       // Check if email is verified before attempting to post
       if (!authProvider.isEmailVerified()) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Please verify your email address before posting a book.'),
             backgroundColor: Colors.orange,
           ),
@@ -83,7 +81,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
         author: _authorController.text.trim(),
         condition: _selectedCondition,
         ownerId: authProvider.currentUser!.uid,
-        ownerName: authProvider.currentUser!.displayName ?? 'User',
+        ownerName: authProvider.currentUser?.displayName ?? '',
         swapFor: _swapForController.text.trim(),
         imageFile: _selectedImage,
       );
@@ -173,7 +171,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
                 child: Container(
                   height: 200,
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _selectedImage != null
@@ -189,7 +187,7 @@ class _PostBookScreenState extends State<PostBookScreen> {
                             _selectedImageBytes!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
-                              print('DEBUG: Image error: $error');
+                              debugPrint('DEBUG: Image error: $error');
                               return const Icon(
                                 Icons.book,
                                 size: 30,

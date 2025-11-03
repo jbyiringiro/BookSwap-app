@@ -65,7 +65,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           _message = 'An unexpected error occurred. Please try again.';
           _messageIsError = true;
         });
-        print('Unexpected error during password reset: $e');
+        debugPrint('Unexpected error during password reset: $e');
       } finally {
         setState(() {
           _isLoading = false;

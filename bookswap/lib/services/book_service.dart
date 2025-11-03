@@ -2,6 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:async';
 import '../models/book_model.dart';
@@ -46,16 +47,16 @@ class BookService {
       // Upload image if provided (with timeout)
       if (imageFile != null) {
         try {
-          print('DEBUG: Image file selected. Starting upload...'); // Debug log
+          debugPrint('DEBUG: Image file selected. Starting upload...'); // Debug log
           imageUrl = await _uploadImageWithTimeout(imageFile, ownerId);
-          print('DEBUG: Image URL received: $imageUrl'); // Debug log
+          debugPrint('DEBUG: Image URL received: $imageUrl'); // Debug log
         } catch (e) {
-          print('ERROR uploading image: $e');
+          debugPrint('ERROR uploading image: $e');
           // Proceed without image to avoid losing the listing
           imageUrl = null; 
         }
       } else {
-        print('DEBUG: No image file provided'); // Debug log
+        debugPrint('DEBUG: No image file provided'); // Debug log
       }
 
       // Create the book document in Firestore
@@ -73,10 +74,10 @@ class BookService {
         'requestedByName': null,
       });
 
-      print('DEBUG: Book created successfully with ID: ${docRef.id}, imageUrl: $imageUrl'); // Debug log
+      debugPrint('DEBUG: Book created successfully with ID: ${docRef.id}, imageUrl: $imageUrl'); // Debug log
       return true;
     } catch (e) {
-      print('ERROR creating book listing: $e');
+      debugPrint('ERROR creating book listing: $e');
       return false;
     }
   }
@@ -105,7 +106,7 @@ class BookService {
       // Create a unique filename using owner ID and timestamp
       String fileName = 'book_images/${ownerId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       
-      print('DEBUG: Starting image upload to path: $fileName'); // Debug log
+      debugPrint('DEBUG: Starting image upload to path: $fileName'); // Debug log
       
       // Get a reference to the storage location
       Reference storageRef = _storage.ref().child(fileName);
@@ -116,16 +117,16 @@ class BookService {
       // Wait for the upload to complete
       TaskSnapshot snapshot = await uploadTask;
       
-      print('DEBUG: Upload task completed. State: ${snapshot.state}'); // Debug log
+      debugPrint('DEBUG: Upload task completed. State: ${snapshot.state}'); // Debug log
       
       // Get the download URL for the uploaded image
       String downloadUrl = await snapshot.ref.getDownloadURL();
       
-      print('DEBUG: Image uploaded successfully. URL: $downloadUrl'); // Debug log
+      debugPrint('DEBUG: Image uploaded successfully. URL: $downloadUrl'); // Debug log
       
       return downloadUrl;
     } catch (e) {
-      print('ERROR: Image upload failed: $e'); // Error log
+      debugPrint('ERROR: Image upload failed: $e'); // Error log
       rethrow;
     }
   }
@@ -198,7 +199,7 @@ class BookService {
           updates['imageUrl'] = imageUrl;
         } catch (e) {
           // Print error and return false if image upload fails
-          print('Error uploading new image: $e');
+          debugPrint('Error uploading new image: $e');
           return false;
         }
       }
@@ -208,21 +209,45 @@ class BookService {
       return true;
     } catch (e) {
       // Print error and return false if the update fails
-      print('Error updating book listing: $e');
+      debugPrint('Error updating book listing: $e');
       return false;
     }
   }
 
   /// Deletes a book listing from Firestore
-  Future<bool> deleteBookListing(String bookId) async {
+  /// Returns a map with success status and error message
+  Future<Map<String, dynamic>> deleteBookListing(String bookId) async {
     try {
+      debugPrint('DEBUG: Starting delete for book ID: $bookId');
+      
+      // First, fetch the book to verify it exists and log its details
+      final doc = await _firestore.collection('books').doc(bookId).get();
+      if (!doc.exists) {
+        debugPrint('ERROR: Book with ID $bookId does not exist');
+        return {
+          'success': false,
+          'error': 'Book does not exist'
+        };
+      }
+      
+      final bookData = doc.data() as Map<String, dynamic>;
+      debugPrint('DEBUG: Book data before delete: $bookData');
+      debugPrint('DEBUG: Book ownerId: ${bookData['ownerId']}');
+      
       // Delete the book document
       await _firestore.collection('books').doc(bookId).delete();
-      return true;
+      debugPrint('DEBUG: Book deleted successfully');
+      return {
+        'success': true,
+        'error': null
+      };
     } catch (e) {
-      // Print error and return false if deletion fails
-      print('Error deleting book listing: $e');
-      return false;
+      // Print error and return detailed error information
+      debugPrint('ERROR deleting book listing: $e');
+      return {
+        'success': false,
+        'error': 'Failed to delete book: $e'
+      };
     }
   }
 
@@ -250,7 +275,7 @@ class BookService {
       return true;
     } catch (e) {
       // Print error and return false if the request fails
-      print('Error requesting swap: $e');
+      debugPrint('Error requesting swap: $e');
       return false;
     }
   }
@@ -266,7 +291,7 @@ class BookService {
       return true;
     } catch (e) {
       // Print error and return false if the acceptance fails
-      print('Error accepting swap: $e');
+      debugPrint('Error accepting swap: $e');
       return false;
     }
   }
@@ -284,7 +309,7 @@ class BookService {
       return true;
     } catch (e) {
       // Print error and return false if the cancellation fails
-      print('Error canceling swap: $e');
+      debugPrint('Error canceling swap: $e');
       return false;
     }
   }
@@ -293,14 +318,14 @@ class BookService {
   /// Filters for books where requestedBy matches the provided user ID
   /// Orders by creation date (newest first)
   Stream<List<BookListing>> getUserSwapRequests(String userId) {
-    print('DEBUG: getUserSwapRequests stream called for user: $userId'); // Debug log
+    debugPrint('DEBUG: getUserSwapRequests stream called for user: $userId'); // Debug log
     return _firestore
         .collection('books')
         .where('requestedBy', isEqualTo: userId) // Filter for books requested by the user
         .orderBy('createdAt', descending: true) // Order by creation date (newest first)
         .snapshots()
         .map((snapshot) {
-      print('DEBUG: getUserSwapRequests snapshot received with ${snapshot.docs.length} docs'); // Debug log
+      debugPrint('DEBUG: getUserSwapRequests snapshot received with ${snapshot.docs.length} docs'); // Debug log
       return snapshot.docs.map((doc) => BookListing.fromFirestore(doc)).toList(); // Use BookListing model
     });
   }

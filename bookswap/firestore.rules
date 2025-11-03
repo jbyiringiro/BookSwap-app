@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Books collection - allow authenticated users to perform operations
+    match /books/{bookId} {
+      // Allow authenticated users to read books
+      allow read: if request.auth != null;
+      
+      // Allow authenticated users to create books
+      allow create: if request.auth != null;
+      
+      // Allow authenticated users to update books
+      allow update: if request.auth != null;
+      
+      // Allow authenticated users to delete books
+      allow delete: if request.auth != null;
+    }
+
+    // Users collection rules
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Chat rooms collection rules (using snake_case to match code)
+    match /chat_rooms/{chatRoomId} {
+      // Allow any authenticated user to read chat rooms
+      allow read: if request.auth != null;
+      
+      // Allow authenticated users to create chat rooms
+      allow create: if request.auth != null;
+      
+      // Allow authenticated users to update chat rooms
+      allow update: if request.auth != null;
+      
+      // Allow authenticated users to delete chat rooms
+      allow delete: if request.auth != null;
+
+      // Messages subcollection rules
+      match /messages/{messageId} {
+        // Allow any authenticated user to read messages
+        allow read: if request.auth != null;
+        
+        // Allow authenticated users to create messages
+        allow create: if request.auth != null;
+        
+        // Allow authenticated users to update messages
+        allow update: if request.auth != null;
+        
+        // Allow authenticated users to delete messages
+        allow delete: if request.auth != null;
+      }
+    }
+
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

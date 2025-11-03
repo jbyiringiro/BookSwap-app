@@ -2,6 +2,7 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 // Import the AuthResult class
 import '../models/auth_result.dart'; // Ensure the path is correct relative to this file
 
@@ -84,7 +85,7 @@ class AuthService {
       }
     } catch (e) {
       // Print error to console for debugging
-      print('Sign up error: $e');
+      debugPrint('Sign up error: $e');
       return AuthResult(
         success: false,
         message: 'An unexpected error occurred during sign up.',
@@ -160,7 +161,7 @@ class AuthService {
       }
     } catch (e) {
       // Print error to console for debugging
-      print('Sign in error: $e');
+      debugPrint('Sign in error: $e');
       return AuthResult(
         success: false,
         message: 'An unexpected error occurred during sign in.',
@@ -176,7 +177,7 @@ class AuthService {
       await _auth.signOut();
     } catch (e) {
       // Print error to console for debugging
-      print('Sign out error: $e');
+      debugPrint('Sign out error: $e');
     }
   }
 

@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/book_service.dart';
 import '../models/book_model.dart';
-import '../widgets/book_card.dart'; // Assuming you have this widget
 import '../widgets/bottom_nav_bar.dart';
 
 /// Screen displaying the user's book listings and their swap requests ("My Offers").
@@ -131,152 +130,148 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: InkWell(
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/book_detail',
-                      arguments: book,
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        // Book Image
-                        Container(
-                          width: 80,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[800],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: book.imageUrl != null
-                                ? Image.network(
-                                    book.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
-                                        Icons.book,
-                                        size: 30,
-                                        color: Colors.grey,
-                                      );
-                                    },
-                                  )
-                                : const Icon(
-                                    Icons.book,
-                                    size: 30,
-                                    color: Colors.grey,
-                                  ),
-                          ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      // Book Image
+                      Container(
+                        width: 80,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey[800],
                         ),
-                        const SizedBox(width: 16),
-                        // Book Info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                book.title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'by ${book.author}',
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: book.swapStatus == 'Available'
-                                          ? Colors.green.withOpacity(0.2)
-                                          : book.swapStatus == 'Pending'
-                                              ? Colors.orange.withOpacity(0.2)
-                                              : Colors.red.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      book.swapStatus,
-                                      style: TextStyle(
-                                        color: book.swapStatus == 'Available'
-                                            ? Colors.green
-                                            : book.swapStatus == 'Pending'
-                                                ? Colors.orange
-                                                : Colors.red,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '• ${book.condition}',
-                                    style: const TextStyle(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: book.imageUrl != null
+                              ? Image.network(
+                                  book.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(
+                                      Icons.book,
+                                      size: 30,
                                       color: Colors.grey,
+                                    );
+                                  },
+                                )
+                              : const Icon(
+                                  Icons.book,
+                                  size: 30,
+                                  color: Colors.grey,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Book Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              book.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'by ${book.author}',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: book.swapStatus == 'Available'
+                                        ? Colors.green.withValues(alpha: 0.2)
+                                        : book.swapStatus == 'Pending'
+                                            ? Colors.orange.withValues(alpha: 0.2)
+                                            : Colors.red.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    book.swapStatus,
+                                    style: TextStyle(
+                                      color: book.swapStatus == 'Available'
+                                          ? Colors.green
+                                          : book.swapStatus == 'Pending'
+                                              ? Colors.orange
+                                              : Colors.red,
                                       fontSize: 12,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '• ${book.condition}',
+                                  style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        // Edit and Delete Buttons
-                        PopupMenuButton<String>(
-                          onSelected: (value) {
-                            if (value == 'edit') {
-                              Navigator.pushNamed(
-                                context,
-                                '/edit_book',
-                                arguments: book,
-                              );
-                            } else if (value == 'delete') {
-                              _showDeleteConfirmation(context, book.id);
-                            }
-                          },
-                          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                            const PopupMenuItem<String>(
-                              value: 'edit',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.edit, color: Colors.blue),
-                                  SizedBox(width: 8),
-                                  Text('Edit'),
-                                ],
+                      ),
+                      const SizedBox(width: 12),
+                      // Edit and Delete Buttons - Stacked vertically on the right
+                      SizedBox(
+                        width: 90,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/edit_book',
+                                  arguments: book,
+                                );
+                              },
+                              icon: const Icon(Icons.edit, size: 16),
+                              label: const Text('Edit', style: TextStyle(fontSize: 12)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                minimumSize: const Size(double.infinity, 32),
                               ),
                             ),
-                            const PopupMenuItem<String>(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.delete, color: Colors.red),
-                                  SizedBox(width: 8),
-                                  Text('Delete'),
-                                ],
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                _showDeleteConfirmation(context, book.id);
+                              },
+                              icon: const Icon(Icons.delete, size: 16),
+                              label: const Text('Delete', style: TextStyle(fontSize: 12)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                minimumSize: const Size(double.infinity, 32),
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -316,9 +311,10 @@ class _MyListingsScreenState extends State<MyListingsScreen>
   /// Deletes a book listing
   void _deleteBook(String bookId) async {
     final bookService = BookService();
-    bool success = await bookService.deleteBookListing(bookId);
+    debugPrint('DEBUG: Attempting to delete book with ID: $bookId');
+    final result = await bookService.deleteBookListing(bookId);
 
-    if (success) {
+    if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Book deleted successfully!'),
@@ -327,8 +323,8 @@ class _MyListingsScreenState extends State<MyListingsScreen>
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to delete book. Please try again.'),
+        SnackBar(
+          content: Text('Error: ${result['error']}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -457,10 +453,10 @@ class _MyListingsScreenState extends State<MyListingsScreen>
                                     ),
                                     decoration: BoxDecoration(
                                       color: book.swapStatus == 'Pending'
-                                          ? Colors.orange.withOpacity(0.2)
+                                          ? Colors.orange.withValues(alpha: 0.2)
                                           : book.swapStatus == 'Completed'
-                                              ? Colors.green.withOpacity(0.2)
-                                              : Colors.grey.withOpacity(0.2), // For other statuses like 'Available' if somehow it appears here
+                                              ? Colors.green.withValues(alpha: 0.2)
+                                              : Colors.grey.withValues(alpha: 0.2), // For other statuses like 'Available' if somehow it appears here
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(

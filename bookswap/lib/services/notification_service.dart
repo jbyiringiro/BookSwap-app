@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/chat_model.dart';
 
 class ChatService {
@@ -25,8 +26,8 @@ class ChatService {
       
       return roomId;
     } catch (e) {
-      print('Error creating chat room: $e');
-      throw e;
+      debugPrint('Error creating chat room: $e');
+      rethrow;
     }
   }
 
@@ -43,23 +44,20 @@ class ChatService {
         List<String> participants = List<String>.from(data['participants']);
         String otherUser = participants.firstWhere((p) => p != userId);
         
-        ChatMessage? lastMessage;
-        if (data['lastMessage'] != null) {
-          Map<String, dynamic> lastMsgData = data['lastMessage'] as Map<String, dynamic>;
-          lastMessage = ChatMessage(
-            id: lastMsgData['id'] ?? '',
-            text: lastMsgData['text'] ?? '',
-            senderId: lastMsgData['senderId'] ?? '',
-            timestamp: (lastMsgData['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
-          );
-        }
+        String otherUserName = data['otherUserName'] ?? '';
+        DateTime lastMessageTimestamp = (data['lastMessageTimestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+        String lastMessageText = data['lastMessageText'] ?? '';
+        String lastMessageSenderId = data['lastMessageSenderId'] ?? '';
         
         chatRooms.add(ChatRoom(
           id: doc.id,
           participants: participants,
           currentUserId: userId,
           otherUserId: otherUser,
-          lastMessage: lastMessage,
+          otherUserName: otherUserName,
+          lastMessageTimestamp: lastMessageTimestamp,
+          lastMessageText: lastMessageText,
+          lastMessageSenderId: lastMessageSenderId,
         ));
       }
       return chatRooms;
@@ -81,7 +79,7 @@ class ChatService {
           id: doc.id,
           text: data['text'] ?? '',
           senderId: data['senderId'] ?? '',
-          timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          timestamp: (data['timestamp'] as Timestamp).toDate(),
         );
       }).toList();
     });
@@ -111,8 +109,8 @@ class ChatService {
         },
       });
     } catch (e) {
-      print('Error sending message: $e');
-      throw e;
+      debugPrint('Error sending message: $e');
+      rethrow;
     }
   }
 }

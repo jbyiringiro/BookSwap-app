@@ -1,6 +1,7 @@
 // lib/screens/settings_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
@@ -91,7 +92,7 @@ class SettingsScreen extends StatelessWidget {
                                 ),
                               );
                             } catch (e) {
-                              print('Error sending verification email: $e');
+                              debugPrint('Error sending verification email: $e');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Failed to send verification email. Please try again.'),
@@ -122,7 +123,7 @@ class SettingsScreen extends StatelessWidget {
                     onChanged: (value) {
                       notificationProvider.setReminderEnabled(value); // Update provider and save
                     },
-                    activeColor: Colors.blue, 
+                    activeThumbColor: Colors.blue, 
                   );
                 },
               ),
@@ -135,7 +136,7 @@ class SettingsScreen extends StatelessWidget {
                     onChanged: (value) {
                       notificationProvider.setEmailUpdatesEnabled(value); // Update provider and save
                     },
-                    activeColor: Colors.blue, 
+                    activeThumbColor: Colors.blue, 
                   );
                 },
               ),
@@ -148,7 +149,7 @@ class SettingsScreen extends StatelessWidget {
                     onChanged: (value) {
                       themeProvider.toggleTheme(); // Toggle theme when switch is changed
                     },
-                    activeColor: Colors.blue, 
+                    activeThumbColor: Colors.blue, 
                   );
                 },
               ),
